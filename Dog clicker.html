@@ -1,0 +1,4048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Clicker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Nunito', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Floating bones background */
+        .bg-bone {
+            position: fixed;
+            font-size: 30px;
+            opacity: 0.1;
+            animation: floatBone 15s infinite linear;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes floatBone {
+            0% { transform: translateY(100vh) rotate(0deg); }
+            100% { transform: translateY(-100px) rotate(360deg); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+        }
+
+        .header h1 span {
+            display: inline-block;
+            animation: bounce 0.6s ease infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        /* Score Display */
+        .score-panel {
+            text-align: center;
+            margin: 10px auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .score-main {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 2.8rem;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .score-per-sec {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.8);
+            margin-top: 2px;
+        }
+
+        /* Main Layout */
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            padding: 10px 20px 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+            flex-wrap: wrap;
+        }
+
+        /* Dog Click Area */
+        .click-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .dog-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dog-btn {
+            width: 240px;
+            height: 240px;
+            border-radius: 24px;
+            border: 6px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.15);
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dog-btn::after {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 20%;
+            width: 30%;
+            height: 20%;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            transform: rotate(-30deg);
+        }
+
+        .dog-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 -4px 10px rgba(0,0,0,0.1);
+        }
+
+        .dog-btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3), inset 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .dog-btn.clicked {
+            animation: dogPop 0.15s ease;
+        }
+
+        @keyframes dogPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.88); }
+            100% { transform: scale(1); }
+        }
+
+        /* Click particles */
+        .click-particle {
+            position: absolute;
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #FFD700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            pointer-events: none;
+            animation: particleFly 1s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes particleFly {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+
+        /* Click power display */
+        .click-power {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 8px 20px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Shop Panel */
+        .shop-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 20px;
+            width: 340px;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+
+        .shop-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .shop-panel::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        .shop-title {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.5rem;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .shop-item {
+            background: rgba(255,255,255,0.12);
+            border: 2px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .shop-item:hover {
+            background: rgba(255,255,255,0.22);
+            border-color: rgba(255,255,255,0.35);
+            transform: translateX(4px);
+        }
+
+        .shop-item.cannot-afford {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .shop-item.cannot-afford:hover {
+            transform: none;
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .shop-icon {
+            font-size: 2.2rem;
+            width: 50px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .shop-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .shop-name {
+            font-weight: 700;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .shop-desc {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.65);
+            margin-top: 2px;
+        }
+
+        .shop-cost {
+            font-family: 'Fredoka One', sans-serif;
+            color: #FFD700;
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        .shop-owned {
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 3px 10px;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            text-align: center;
+            min-width: 32px;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 20px;
+            width: 220px;
+        }
+
+        .stats-title {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.2rem;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.85);
+            font-size: 0.85rem;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .stat-value {
+            font-weight: 700;
+        }
+
+        /* Achievements */
+        .achievement-popup {
+            position: fixed;
+            top: 20px;
+            right: -400px;
+            background: linear-gradient(135deg, #FFD700, #FFA000);
+            color: #333;
+            padding: 16px 24px;
+            border-radius: 14px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transition: right 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 300px;
+        }
+
+        .achievement-popup.show {
+            right: 20px;
+        }
+
+        .achievement-popup h3 {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .achievement-popup p {
+            font-size: 0.85rem;
+        }
+
+        /* Reset button */
+        .reset-btn {
+            display: block;
+            margin: 10px auto 0;
+            background: rgba(255,70,70,0.3);
+            border: 1px solid rgba(255,70,70,0.5);
+            color: #ff9999;
+            padding: 8px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255,70,70,0.5);
+            color: #fff;
+        }
+
+        /* Purchase flash */
+        .purchase-flash {
+            animation: flashGreen 0.4s ease;
+        }
+
+        @keyframes flashGreen {
+            0% { border-color: rgba(255,255,255,0.15); }
+            50% { border-color: #4CAF50; box-shadow: 0 0 20px rgba(76,175,80,0.4); }
+            100% { border-color: rgba(255,255,255,0.15); }
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .shop-panel, .stats-panel {
+                width: 90%;
+                max-width: 400px;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            .score-main {
+                font-size: 2rem;
+            }
+            .dog-btn {
+                width: 180px;
+                height: 180px;
+                font-size: 90px;
+            }
+            .dog-container {
+                width: 220px;
+                height: 220px;
+            }
+        }
+
+        /* ===== Mood Display ===== */
+        .mood-display {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 6px 18px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        /* ===== Combo Display ===== */
+        .combo-display {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.5rem;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255,215,0,0.6), 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+            z-index: 50;
+            display: none;
+            transition: all 0.15s;
+        }
+
+        /* ===== Power-Ups Bar ===== */
+        .power-ups-bar {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .power-up-btn {
+            position: relative;
+            background: rgba(255,255,255,0.12);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 12px;
+            padding: 8px 12px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            min-width: 90px;
+            overflow: hidden;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .power-up-btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        .power-up-btn.active {
+            background: rgba(76,175,80,0.3);
+            border-color: #4CAF50;
+            box-shadow: 0 0 15px rgba(76,175,80,0.4);
+            animation: puPulse 1s infinite;
+        }
+
+        .power-up-btn.cooldown {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .power-up-btn.no-afford {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        @keyframes puPulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(76,175,80,0.4); }
+            50% { box-shadow: 0 0 25px rgba(76,175,80,0.7); }
+        }
+
+        .pu-icon { font-size: 1.4rem; }
+        .pu-name { font-size: 0.65rem; font-weight: 700; }
+        .pu-status { font-size: 0.6rem; opacity: 0.8; }
+
+        .pu-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            border-radius: 0 0 12px 12px;
+            transition: width 0.3s linear;
+        }
+
+        /* ===== Golden Bone ===== */
+        .golden-bone {
+            position: fixed;
+            font-size: 3.5rem;
+            cursor: pointer;
+            z-index: 500;
+            display: none;
+            filter: drop-shadow(0 0 15px rgba(255,215,0,0.8));
+            transition: transform 0.1s;
+        }
+
+        .golden-bone:hover {
+            transform: scale(1.3);
+        }
+
+        .golden-pulse {
+            animation: goldenPulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes goldenPulse {
+            0%, 100% { transform: scale(1) rotate(-5deg); filter: drop-shadow(0 0 15px rgba(255,215,0,0.8)); }
+            50% { transform: scale(1.15) rotate(5deg); filter: drop-shadow(0 0 25px rgba(255,215,0,1)); }
+        }
+
+        @keyframes goldenRewardAnim {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -80%) scale(1.5); }
+        }
+
+        /* ===== Screen Shake ===== */
+        .screen-shake {
+            animation: shake 0.3s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        /* ===== Shop Category Tabs ===== */
+        .shop-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .shop-tab {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 6px 4px;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .shop-tab:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .shop-tab.active {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.4);
+            color: #fff;
+        }
+
+        /* ===== Milestone Banner ===== */
+        .milestone-banner {
+            position: fixed;
+            top: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            color: #333;
+            padding: 14px 30px;
+            border-radius: 0 0 16px 16px;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.1rem;
+            box-shadow: 0 8px 30px rgba(255,140,0,0.5);
+            z-index: 1001;
+            transition: top 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .milestone-banner.show {
+            top: 0;
+        }
+
+        /* ===== Treat Rain Effect ===== */
+        .treat-rain-particle {
+            position: fixed;
+            font-size: 1.5rem;
+            pointer-events: none;
+            z-index: 499;
+            animation: treatFall 2s linear forwards;
+        }
+
+        @keyframes treatFall {
+            0% { opacity: 1; transform: translateY(-20px) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(100vh) rotate(360deg); }
+        }
+
+        /* ===== Shop item production info ===== */
+        .shop-production {
+            font-size: 0.7rem;
+            color: rgba(255,215,0,0.7);
+            margin-top: 2px;
+        }
+
+        /* ===== Prestige / Rebirth Button ===== */
+        .prestige-btn {
+            display: none;
+            margin: 8px auto;
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            border: 2px solid #bb6bd9;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(155,89,182,0.4);
+        }
+
+        .prestige-btn:hover {
+            background: linear-gradient(135deg, #bb6bd9, #9b59b6);
+            transform: scale(1.05);
+            box-shadow: 0 6px 25px rgba(155,89,182,0.6);
+        }
+
+        .prestige-info {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.6);
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        /* ===== Boss Fight ===== */
+        .boss-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .boss-overlay.active {
+            display: flex;
+        }
+
+        .boss-title {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 2rem;
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255,68,68,0.6);
+            animation: bossTitlePulse 1s infinite;
+        }
+
+        @keyframes bossTitlePulse {
+            0%, 100% { text-shadow: 0 0 20px rgba(255,68,68,0.6); }
+            50% { text-shadow: 0 0 40px rgba(255,68,68,1); }
+        }
+
+        .boss-sprite {
+            font-size: 8rem;
+            animation: bossIdle 1s ease-in-out infinite;
+            cursor: pointer;
+            transition: transform 0.05s;
+            filter: drop-shadow(0 0 20px rgba(255,0,0,0.5));
+        }
+
+        .boss-sprite:active {
+            transform: scale(0.9);
+        }
+
+        @keyframes bossIdle {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        .boss-hp-bar {
+            width: 300px;
+            height: 20px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .boss-hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ff6666);
+            border-radius: 10px;
+            transition: width 0.15s;
+        }
+
+        .boss-hp-text {
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .boss-timer {
+            color: #ffaa00;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .boss-reward-text {
+            color: #FFD700;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.5rem;
+        }
+
+        .boss-hit {
+            animation: bossHit 0.15s ease;
+        }
+
+        @keyframes bossHit {
+            0% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255,0,0,0.5)); }
+            50% { transform: scale(0.85); filter: drop-shadow(0 0 40px rgba(255,255,0,1)) brightness(2); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255,0,0,0.5)); }
+        }
+
+        /* ===== Mini-Game: Treat Catch ===== */
+        .minigame-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .minigame-overlay.active {
+            display: flex;
+        }
+
+        .minigame-area {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(180deg, #1a1a3e, #2d1b69);
+            border-radius: 20px;
+            border: 3px solid rgba(255,255,255,0.2);
+            overflow: hidden;
+        }
+
+        .minigame-title {
+            font-family: 'Fredoka One', sans-serif;
+            color: #fff;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .minigame-score {
+            color: #FFD700;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+
+        .minigame-timer {
+            color: #ffaa00;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .falling-treat {
+            position: absolute;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.1s;
+            z-index: 10;
+        }
+
+        .falling-treat:hover {
+            transform: scale(1.3);
+        }
+
+        .falling-bomb {
+            position: absolute;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* ===== Win Screen / Endgame ===== */
+        .win-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, #1a0a2e 0%, #0d0015 60%, #000 100%);
+            z-index: 3000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            overflow: hidden;
+        }
+
+        .win-overlay.active {
+            display: flex;
+            animation: winFadeIn 1.2s ease-out;
+        }
+
+        @keyframes winFadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .win-fireworks-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .win-confetti-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            top: -20px;
+            width: 10px;
+            height: 14px;
+            border-radius: 2px;
+            animation: confettiFall linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(0) rotateZ(0deg) rotateX(0deg); opacity: 1; }
+            75% { opacity: 1; }
+            100% { transform: translateY(105vh) rotateZ(720deg) rotateX(360deg); opacity: 0; }
+        }
+
+        .win-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .win-dog {
+            font-size: 7rem;
+            opacity: 0;
+            transform: scale(0) rotate(-180deg);
+            animation: winDogEntrance 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards,
+                       winDogFloat 3s ease-in-out 2s infinite;
+            filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.6));
+        }
+
+        .win-dog img {
+            width: 140px;
+            height: 140px;
+            object-fit: contain;
+            border-radius: 50%;
+            border: 4px solid #FFD700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+        }
+
+        .win-crown {
+            position: absolute;
+            top: -30px;
+            font-size: 3rem;
+            animation: crownBob 2s ease-in-out 2s infinite;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8));
+            opacity: 0;
+            animation: crownAppear 0.8s ease 1.8s forwards, crownBob 2s ease-in-out 2.6s infinite;
+        }
+
+        @keyframes winDogEntrance {
+            0% { opacity: 0; transform: scale(0) rotate(-180deg); }
+            60% { opacity: 1; transform: scale(1.3) rotate(10deg); }
+            80% { transform: scale(0.95) rotate(-5deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        @keyframes winDogFloat {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+        }
+
+        @keyframes crownAppear {
+            0% { opacity: 0; transform: translateY(-40px) scale(0); }
+            70% { opacity: 1; transform: translateY(5px) scale(1.2); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes crownBob {
+            0%, 100% { transform: translateY(0) rotate(-3deg); }
+            50% { transform: translateY(-8px) rotate(3deg); }
+        }
+
+        .win-title {
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 3.2rem;
+            background: linear-gradient(90deg, #FFD700, #FF8C00, #FF6347, #FF69B4, #9370DB, #00BFFF, #FFD700);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: winTitleSlideIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1s forwards,
+                       rainbowText 4s linear 2s infinite;
+            opacity: 0;
+            transform: translateY(50px);
+            filter: drop-shadow(0 0 20px rgba(255,215,0,0.5));
+            text-align: center;
+        }
+
+        @keyframes winTitleSlideIn {
+            0% { opacity: 0; transform: translateY(50px) scale(0.5); }
+            60% { opacity: 1; transform: translateY(-10px) scale(1.1); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes rainbowText {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+
+        .win-subtitle {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            max-width: 460px;
+            line-height: 1.6;
+            opacity: 0;
+            animation: winFadeSlideUp 0.8s ease 1.6s forwards;
+            text-shadow: 0 0 20px rgba(255,255,255,0.3);
+        }
+
+        @keyframes winFadeSlideUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .win-stats {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 18px 36px;
+            color: #fff;
+            text-align: center;
+            opacity: 0;
+            animation: winStatsReveal 0.8s ease 2.2s forwards;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.3), inset 0 0 30px rgba(255,255,255,0.05);
+        }
+
+        @keyframes winStatsReveal {
+            0% { opacity: 0; transform: translateY(40px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .win-stats h3 {
+            font-family: 'Fredoka One', sans-serif;
+            margin-bottom: 10px;
+            color: #FFD700;
+        }
+
+        .win-stats p {
+            margin: 5px 0;
+            font-size: 0.95rem;
+            opacity: 0;
+            animation: statLineReveal 0.4s ease forwards;
+        }
+
+        @keyframes statLineReveal {
+            0% { opacity: 0; transform: translateX(-20px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+
+        .win-buttons {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            opacity: 0;
+            animation: winFadeSlideUp 0.8s ease 3.5s forwards;
+        }
+
+        .win-btn {
+            background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,140,0,0.3));
+            border: 2px solid rgba(255,215,0,0.5);
+            color: #fff;
+            padding: 14px 32px;
+            border-radius: 16px;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .win-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: conic-gradient(transparent, rgba(255,255,255,0.1), transparent, rgba(255,255,255,0.1), transparent);
+            animation: winBtnGlow 3s linear infinite;
+        }
+
+        @keyframes winBtnGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .win-btn:hover {
+            background: linear-gradient(135deg, rgba(255,215,0,0.5), rgba(255,140,0,0.5));
+            transform: scale(1.08) translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255,215,0,0.3);
+        }
+
+        .win-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* sparkle particles around win screen */
+        .win-sparkle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #FFD700;
+            pointer-events: none;
+            z-index: 1;
+            animation: sparkleDrift 3s ease-in-out infinite;
+        }
+
+        @keyframes sparkleDrift {
+            0%, 100% { opacity: 0; transform: scale(0) translateY(0); }
+            50% { opacity: 1; transform: scale(1) translateY(-30px); }
+        }
+
+        /* golden rays behind the dog */
+        .win-rays {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            z-index: 0;
+            animation: raysRotate 20s linear infinite;
+            opacity: 0;
+            animation: raysFadeIn 2s ease 0.3s forwards, raysRotate 20s linear 2s infinite;
+        }
+
+        @keyframes raysFadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 0.3; }
+        }
+
+        @keyframes raysRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== Progress Bar (endgame) ===== */
+        .progress-bar-container {
+            width: 90%;
+            max-width: 700px;
+            margin: 5px auto;
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .progress-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.75rem;
+            margin-bottom: 3px;
+        }
+
+        .progress-track {
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #FFD700, #ff6347);
+            border-radius: 5px;
+            transition: width 0.5s;
+            background-size: 200%;
+            animation: progressShimmer 3s linear infinite;
+        }
+
+        @keyframes progressShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ===== Event Button ===== */
+        .event-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 6px 14px;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 4px 2px;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .event-btn:hover {
+            background: rgba(255,255,255,0.25);
+            color: #fff;
+        }
+
+        .event-btn.disabled-btn {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .events-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        /* ===== Auth / Login Screen ===== */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .login-overlay.hidden { display: none; }
+
+        .login-box {
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 24px;
+            padding: 40px 36px;
+            width: 380px;
+            max-width: 90vw;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .login-box h2 {
+            font-family: 'Fredoka One', sans-serif;
+            color: #FFD700;
+            font-size: 2rem;
+            margin-bottom: 6px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .login-box .login-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-family: 'Nunito', sans-serif;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .login-box input::placeholder { color: rgba(255,255,255,0.4); }
+        .login-box input:focus { border-color: #FFD700; }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 8px;
+        }
+
+        .login-btn.primary {
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            color: #333;
+        }
+
+        .login-btn.secondary {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .login-btn:hover { transform: scale(1.03); filter: brightness(1.1); }
+
+        .login-error {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        .login-toggle {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            margin-top: 14px;
+        }
+
+        .login-toggle a {
+            color: #FFD700;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* User bar at top */
+        .user-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            padding: 6px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 1000;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .user-bar.hidden { display: none; }
+
+        .user-bar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-bar .user-info .username {
+            font-family: 'Fredoka One', sans-serif;
+            color: #FFD700;
+        }
+
+        .user-bar .admin-badge {
+            background: #ff4444;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .user-bar button {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .user-bar button:hover { background: rgba(255,255,255,0.25); }
+
+        .header { margin-top: 35px; }
+
+        /* Admin Panel */
+        .admin-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-overlay.active { display: flex; }
+
+        .admin-panel {
+            background: #1a1a2e;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 30px;
+            width: 500px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #fff;
+        }
+
+        .admin-panel h2 {
+            font-family: 'Fredoka One', sans-serif;
+            color: #ff4444;
+            margin-bottom: 16px;
+        }
+
+        .admin-panel .admin-user {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-panel .admin-user .au-name {
+            font-family: 'Fredoka One', sans-serif;
+            color: #FFD700;
+        }
+
+        .admin-panel .admin-user .au-stats {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .admin-panel button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .admin-panel button:hover { background: rgba(255,255,255,0.2); }
+        .admin-panel button.danger { border-color: #ff4444; color: #ff4444; }
+        .admin-panel button.danger:hover { background: rgba(255,68,68,0.2); }
+
+        .admin-tools {
+            background: rgba(255,140,0,0.08);
+            border: 1px solid rgba(255,140,0,0.2);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .admin-tool-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .admin-tool-row label {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            min-width: 100px;
+        }
+
+        .admin-tool-row input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .admin-tool-row input:focus { border-color: #FFD700; }
+
+        /* ===== Treat World Journey Cinematic ===== */
+        .journey-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 4500;
+            overflow: hidden;
+        }
+
+        .journey-overlay.active { display: block; }
+
+        .journey-scene {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        .journey-scene.visible { opacity: 1; }
+
+        .journey-scene-bg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+        }
+
+        /* Scene 1: Linda's Home — warm cozy room */
+        .scene-city .journey-scene-bg {
+            background: linear-gradient(180deg, #2c1810 0%, #3e2723 30%, #4e342e 60%, #5d4037 100%);
+        }
+
+        .scene-city .city-buildings {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 40%;
+            background: linear-gradient(180deg, #6d4c41, #5d4037);
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            padding: 0 20px;
+        }
+
+        .scene-city .treat-jar {
+            font-size: 4rem;
+            animation: treatJarGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes treatJarGlow {
+            0%, 100% { filter: brightness(1); transform: scale(1); }
+            50% { filter: brightness(1.3); transform: scale(1.1); }
+        }
+
+        .scene-city .home-window {
+            position: absolute;
+            top: 15%;
+            width: 120px; height: 100px;
+            border: 6px solid #8D6E63;
+            border-radius: 8px;
+            background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+            box-shadow: 0 0 30px rgba(255,230,100,0.2);
+        }
+
+        .scene-city .home-window.left { left: 15%; }
+        .scene-city .home-window.right { right: 15%; }
+
+        .scene-city .stars {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 60%;
+        }
+
+        .scene-city .star {
+            position: absolute;
+            width: 3px; height: 3px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: starTwinkle 2s ease-in-out infinite;
+        }
+
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Scene 2: Treat trail path on the ground */
+        .scene-clouds .journey-scene-bg {
+            background: linear-gradient(180deg, #87CEEB 0%, #B0E0FF 25%, #90EE90 60%, #228B22 75%, #1B5E20 100%);
+        }
+
+        .scene-clouds .treat-path {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 35%;
+            background: linear-gradient(180deg, #8B6914, #A0782C);
+            border-radius: 30px 30px 0 0;
+        }
+
+        .scene-clouds .cloud {
+            position: absolute;
+            background: rgba(255,255,255,0.7);
+            border-radius: 50px;
+            box-shadow: 0 5px 30px rgba(255,255,255,0.5);
+            animation: cloudDrift 8s ease-in-out infinite;
+        }
+
+        .scene-clouds .path-treat {
+            position: absolute;
+            font-size: 2rem;
+            animation: pathTreatGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pathTreatGlow {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.15); filter: brightness(1.3); }
+        }
+
+        @keyframes cloudDrift {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(30px); }
+        }
+
+        /* Scene 3: Treat World gates — bone-shaped arch */
+        .scene-gates .journey-scene-bg {
+            background: linear-gradient(180deg, #FFF8E1 0%, #FFE0B2 40%, #FFB74D 70%, #FF9800 100%);
+        }
+
+        .scene-gates .gate-ground {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 30%;
+            background: linear-gradient(180deg, #A0782C, #8B6914);
+            border-radius: 30px 30px 0 0;
+        }
+
+        .gate-structure {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gate-arch {
+            width: 240px;
+            height: 140px;
+            border: 8px solid #FFCC80;
+            border-bottom: none;
+            border-radius: 120px 120px 0 0;
+            box-shadow: 0 0 40px rgba(255, 152, 0, 0.6), inset 0 0 30px rgba(255, 183, 77, 0.3);
+            position: relative;
+            background: rgba(255, 224, 178, 0.15);
+        }
+
+        .gate-bone-decor {
+            position: absolute;
+            font-size: 2rem;
+        }
+
+        .gate-bone-decor.tl { top: 10px; left: 10px; }
+        .gate-bone-decor.tr { top: 10px; right: 10px; }
+
+        .gate-pillar {
+            display: flex;
+            justify-content: space-between;
+            width: 256px;
+        }
+
+        .gate-pillar div {
+            width: 16px;
+            height: 100px;
+            background: linear-gradient(180deg, #FFCC80, #FF9800);
+            box-shadow: 0 0 20px rgba(255,152,0,0.4);
+            border-radius: 4px;
+        }
+
+        .gate-text {
+            position: absolute;
+            top: 40%;
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.2rem;
+            color: #E65100;
+            text-shadow: 0 0 20px rgba(255,152,0,0.8);
+        }
+
+        .gate-glow {
+            position: absolute;
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(255,183,77,0.4), transparent 70%);
+            border-radius: 50%;
+            animation: gateGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes gateGlow {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        /* Scene 4: Treat World */
+        .scene-paradise .journey-scene-bg {
+            background: linear-gradient(180deg, #FFE4B5 0%, #FFDAB9 25%, #FFB347 50%, #FF8C42 75%, #D2691E 100%);
+        }
+
+        .paradise-island {
+            position: absolute;
+            bottom: 15%;
+            z-index: 2;
+        }
+
+        .island-base {
+            width: 300px;
+            height: 80px;
+            background: linear-gradient(180deg, #DEB887, #D2B48C);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 5px 30px rgba(210,105,30,0.3);
+        }
+
+        .treat-decoration {
+            position: absolute;
+            bottom: 60px;
+            font-size: 2.5rem;
+            animation: treatBob 2s ease-in-out infinite;
+        }
+
+        @keyframes treatBob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .paradise-water {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 12%;
+            background: linear-gradient(180deg, rgba(255,179,71,0.6), rgba(210,105,30,0.4));
+            animation: waterWave 3s ease-in-out infinite;
+        }
+
+        .floating-treats {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .floating-treat {
+            position: absolute;
+            font-size: 2rem;
+            animation: floatTreat 4s ease-in-out infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes floatTreat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(15deg); }
+        }
+
+        @keyframes waterWave {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Dog walking/flying in journey */
+        .journey-dog {
+            position: absolute;
+            z-index: 10;
+            transition: left 2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        top 2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        bottom 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform: translateX(-50%);
+        }
+
+        .journey-dog img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 50%;
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255,215,0,0.5);
+        }
+
+        .journey-dog.walking {
+            animation: dogWalk 0.4s ease-in-out infinite;
+        }
+
+        .journey-dog.flying {
+            animation: dogFly 1.5s ease-in-out infinite;
+        }
+
+        @keyframes dogWalk {
+            0%, 100% { transform: translateX(-50%) translateY(0) rotate(-2deg); }
+            50% { transform: translateX(-50%) translateY(-8px) rotate(2deg); }
+        }
+
+        @keyframes dogFly {
+            0%, 100% { transform: translateX(-50%) translateY(0) rotate(-3deg); }
+            50% { transform: translateX(-50%) translateY(-20px) rotate(3deg); }
+        }
+
+        .journey-dog .wings {
+            position: absolute;
+            top: 10px;
+            font-size: 2rem;
+            animation: wingFlap 0.3s ease-in-out infinite;
+            display: none;
+        }
+
+        .journey-dog .wings.left { left: -25px; }
+        .journey-dog .wings.right { right: -25px; transform: scaleX(-1); }
+
+        .journey-dog.flying .wings { display: block; }
+
+        @keyframes wingFlap {
+            0%, 100% { transform: rotate(-20deg) scaleX(1); }
+            50% { transform: rotate(20deg) scaleX(1); }
+        }
+
+        .journey-dog.flying .wings.right {
+            animation: wingFlapR 0.3s ease-in-out infinite;
+        }
+
+        @keyframes wingFlapR {
+            0%, 100% { transform: scaleX(-1) rotate(-20deg); }
+            50% { transform: scaleX(-1) rotate(20deg); }
+        }
+
+        /* Journey text captions */
+        .journey-caption {
+            position: absolute;
+            bottom: 12%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Fredoka One', sans-serif;
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(0,0,0,0.5), 2px 2px 4px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            text-align: center;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        .journey-caption.visible { opacity: 1; }
+
+        .journey-trail {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: trailFade 1s ease-out forwards;
+        }
+
+        @keyframes trailFade {
+            0% { opacity: 0.8; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-box">
+            <h2>🐶 Dog Clicker</h2>
+            <div class="login-subtitle" id="loginSubtitle">Sign in to save your progress</div>
+            <input type="text" id="authUsername" placeholder="Username" autocomplete="off" />
+            <input type="password" id="authPassword" placeholder="Password" />
+            <button class="login-btn primary" id="authPrimaryBtn" onclick="authAction()">Sign In</button>
+            <button class="login-btn secondary" id="authSecondaryBtn" onclick="toggleAuthMode()">Create Account</button>
+            <div class="login-error" id="authError"></div>
+            <div class="login-toggle" id="authToggle">
+                Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Bar -->
+    <div class="user-bar hidden" id="userBar">
+        <div class="user-info">
+            <span>👤</span>
+            <span class="username" id="currentUsername">Guest</span>
+            <span class="admin-badge hidden" id="adminBadge">ADMIN</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button id="adminBtn" class="hidden" onclick="openAdminPanel()">⚙️ Admin</button>
+            <button onclick="logoutUser()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-overlay" id="adminOverlay">
+        <div class="admin-panel">
+            <h2>⚙️ Admin Panel</h2>
+
+            <!-- Admin Tools -->
+            <div class="admin-tools">
+                <h3 style="color:#ff8c00;font-family:'Fredoka One',sans-serif;margin-bottom:10px;">🛠️ Admin Tools</h3>
+                <div class="admin-tool-row">
+                    <button onclick="adminEndGame()" style="background:linear-gradient(135deg,#FFD700,#FF8C00);color:#333;font-weight:bold;">🏝️ End Game (Trigger Win)</button>
+                </div>
+                <div class="admin-tool-row">
+                    <label>Add Treats:</label>
+                    <input type="number" id="adminTreatsInput" placeholder="Amount" min="0" style="width:140px;" />
+                    <button onclick="adminAddTreats()">+ Add</button>
+                    <button onclick="adminSetTreats()">= Set</button>
+                </div>
+                <div class="admin-tool-row">
+                    <label>Set Treats/sec:</label>
+                    <input type="number" id="adminPerSecInput" placeholder="Per second" min="0" style="width:140px;" />
+                    <button onclick="adminSetPerSec()">⚙️ Apply</button>
+                </div>
+            </div>
+
+            <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:16px 0;">
+            <div id="adminUserList"></div>
+            <br>
+            <button onclick="closeAdminPanel()">Close</button>
+        </div>
+    </div>
+
+    <!-- Floating background bones -->
+    <div id="bgBones"></div>
+
+    <!-- Achievement popup -->
+    <div class="achievement-popup" id="achievementPopup">
+        <h3 id="achieveTitle">Achievement!</h3>
+        <p id="achieveText"></p>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>
+            <span style="animation-delay:0s">🐶</span>
+            <span style="animation-delay:0.1s">D</span><span style="animation-delay:0.15s">o</span><span style="animation-delay:0.2s">g</span>
+            <span style="animation-delay:0.3s">C</span><span style="animation-delay:0.35s">l</span><span style="animation-delay:0.4s">i</span><span style="animation-delay:0.45s">c</span><span style="animation-delay:0.5s">k</span><span style="animation-delay:0.55s">e</span><span style="animation-delay:0.6s">r</span>
+            <span style="animation-delay:0.7s">🐶</span>
+        </h1>
+    </div>
+
+    <!-- Score -->
+    <div class="score-panel">
+        <div class="score-main" id="scoreDisplay">0 treats</div>
+        <div class="score-per-sec" id="perSecDisplay">per second: 0</div>
+    </div>
+
+    <!-- Progress to Treat World -->
+    <div class="progress-bar-container" id="progressContainer" style="display:none;">
+        <div class="progress-label" id="progressLabel">🍖 Treat World: 0%</div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <div class="game-container">
+
+        <!-- Stats -->
+        <div class="stats-panel">
+            <div class="stats-title">📊 Stats</div>
+            <div class="stat-row">
+                <span class="stat-label">Total Clicks</span>
+                <span class="stat-value" id="statClicks">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Total Treats</span>
+                <span class="stat-value" id="statTotal">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Per Click</span>
+                <span class="stat-value" id="statPerClick">1</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Per Second</span>
+                <span class="stat-value" id="statPerSec">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Upgrades</span>
+                <span class="stat-value" id="statUpgrades">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Play Time</span>
+                <span class="stat-value" id="statTime">0:00</span>
+            </div>
+            <button class="reset-btn" onclick="resetGame()">🔄 Reset Game</button>
+            <button class="prestige-btn" id="prestigeBtn" onclick="doPrestige()">🔮 Rebirth</button>
+            <div class="prestige-info" id="prestigeInfo"></div>
+            <div class="events-row" id="eventsRow"></div>
+        </div>
+
+        <!-- Clicker -->
+        <div class="click-area">
+            <div class="mood-display" id="moodDisplay">😴 Linda is Sleepy</div>
+            <div class="dog-container" id="dogContainer">
+                <div class="combo-display" id="comboDisplay"></div>
+                <button class="dog-btn" id="dogBtn" onclick="handleClick(event)"><img src="linda.png" alt="Linda the Dog" style="width:100%;height:100%;object-fit:contain;border-radius:16px;pointer-events:none;"></button>
+            </div>
+            <div class="click-power" id="clickPower">🦴 +1 per click</div>
+            <div class="power-ups-bar" id="powerUpsBar"></div>
+        </div>
+
+        <!-- Shop -->
+        <div class="shop-panel">
+            <div class="shop-title">🏪 Treat Shop</div>
+            <div class="shop-tabs">
+                <div class="shop-tab active" data-cat="auto" onclick="switchShopTab('auto')">🤖 Auto</div>
+                <div class="shop-tab" data-cat="click" onclick="switchShopTab('click')">👆 Click</div>
+                <div class="shop-tab" data-cat="special" onclick="switchShopTab('special')">⭐ Special</div>
+            </div>
+            <div id="shopItems"></div>
+        </div>
+
+    </div>
+
+    <!-- Golden Bone (random event) -->
+    <div class="golden-bone" id="goldenBone" onclick="clickGoldenBone()">🦴</div>
+
+    <!-- Milestone Banner -->
+    <div class="milestone-banner" id="milestoneBanner"></div>
+
+    <!-- Boss Fight Overlay -->
+    <div class="boss-overlay" id="bossOverlay">
+        <div class="boss-title" id="bossTitle">⚔️ BOSS FIGHT! ⚔️</div>
+        <div class="boss-timer" id="bossTimer">30s</div>
+        <div class="boss-sprite" id="bossSprite" onclick="hitBoss()">🐺</div>
+        <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill" style="width:100%"></div></div>
+        <div class="boss-hp-text" id="bossHpText">HP: 1000 / 1000</div>
+        <div class="boss-reward-text" id="bossRewardText"></div>
+    </div>
+
+    <!-- Mini-Game Overlay -->
+    <div class="minigame-overlay" id="minigameOverlay">
+        <div class="minigame-title">🌟 Treat Catch!</div>
+        <div class="minigame-timer" id="minigameTimer">15s</div>
+        <div class="minigame-area" id="minigameArea"></div>
+        <div class="minigame-score" id="minigameScore">Caught: 0</div>
+    </div>
+
+    <!-- Treat World Journey Cinematic -->
+    <div class="journey-overlay" id="journeyOverlay">
+        <!-- Scene 1: Linda's Home -->
+        <div class="journey-scene scene-city" id="journeyScene1">
+            <div class="journey-scene-bg">
+                <div class="stars" id="journeyStars"></div>
+                <div class="home-window left"></div>
+                <div class="home-window right"></div>
+                <div class="city-buildings" id="journeyBuildings">
+                    <div class="treat-jar">🏺</div>
+                    <div class="treat-jar" style="animation-delay:0.5s;">🦴</div>
+                    <div class="treat-jar" style="animation-delay:1s;">🍖</div>
+                </div>
+            </div>
+            <div class="journey-caption" id="journeyCaption1">Linda dreams of a world made of treats... 🦴✨</div>
+        </div>
+
+        <!-- Scene 2: Treat trail path -->
+        <div class="journey-scene scene-clouds" id="journeyScene2">
+            <div class="journey-scene-bg"></div>
+            <div class="treat-path"></div>
+            <div id="journeyClouds"></div>
+            <div class="journey-caption" id="journeyCaption2">She follows the trail of treats! 🍖🐾✨</div>
+        </div>
+
+        <!-- Scene 3: Treat World gates -->
+        <div class="journey-scene scene-gates" id="journeyScene3">
+            <div class="journey-scene-bg"></div>
+            <div class="gate-ground"></div>
+            <div class="gate-glow"></div>
+            <div class="gate-structure">
+                <div class="gate-arch">
+                    <span class="gate-bone-decor tl">🦴</span>
+                    <span class="gate-bone-decor tr">🦴</span>
+                    <div class="gate-text">TREAT WORLD</div>
+                </div>
+                <div class="gate-pillar"><div></div><div></div></div>
+            </div>
+            <div class="journey-caption" id="journeyCaption3">The gates of Treat World open! 🦴🌟</div>
+        </div>
+
+        <!-- Scene 4: Treat World -->
+        <div class="journey-scene scene-paradise" id="journeyScene4">
+            <div class="journey-scene-bg"></div>
+            <div class="floating-treats" id="floatingTreats"></div>
+            <div class="paradise-water"></div>
+            <div class="paradise-island">
+                <div class="treat-decoration" style="left:20px;">🦴</div>
+                <div class="treat-decoration" style="left:130px; animation-delay:0.5s;">🍖</div>
+                <div class="treat-decoration" style="right:20px; animation-delay:1s;">🦴</div>
+                <div class="island-base"></div>
+            </div>
+            <div class="journey-caption" id="journeyCaption4">Welcome to Treat World, Linda! 🍖🦴❤️</div>
+        </div>
+
+        <!-- The travelling dog -->
+        <div class="journey-dog" id="journeyDog">
+            <span class="wings left">🕊️</span>
+            <img src="linda.png" alt="Linda" />
+            <span class="wings right">🕊️</span>
+        </div>
+    </div>
+
+    <!-- Win Screen -->
+    <div class="win-overlay" id="winOverlay">
+        <canvas class="win-fireworks-canvas" id="fireworksCanvas"></canvas>
+        <div class="win-confetti-container" id="confettiContainer"></div>
+
+        <!-- Golden rays -->
+        <svg class="win-rays" id="winRays" viewBox="0 0 400 400">
+            <defs>
+                <linearGradient id="rayGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.6" />
+                    <stop offset="100%" style="stop-color:#FFD700;stop-opacity:0" />
+                </linearGradient>
+            </defs>
+            <g transform="translate(200,200)">
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(30)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(60)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(90)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(120)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(150)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(180)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(210)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(240)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(270)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(300)" />
+                <polygon points="0,-10 180,-6 180,6 0,10" fill="url(#rayGrad)" transform="rotate(330)" />
+            </g>
+        </svg>
+
+        <div class="win-content">
+            <div class="win-dog" id="winDogContainer" style="position:relative;display:inline-block;">
+                <img src="linda.png" alt="Linda" />
+                <div class="win-crown">👑</div>
+            </div>
+            <div class="win-title">Treat World!</div>
+            <div class="win-subtitle">Linda has reached Treat World!<br>You gave her the best life ever! 🍖❤️</div>
+            <div class="win-stats" id="winStats"></div>
+            <div class="win-buttons">
+                <button class="win-btn" onclick="closeWinScreen()"><span>Continue Playing 🎮</span></button>
+                <button class="win-btn" onclick="newGamePlus()"><span>New Game+ 🔮</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Game State =====
+        let game = {
+            treats: 0,
+            totalTreats: 0,
+            totalClicks: 0,
+            clickPower: 1,
+            perSecond: 0,
+            startTime: Date.now(),
+            upgrades: {},
+            combo: 0,
+            maxCombo: 0,
+            lastClickTime: 0,
+            moodMultiplier: 1,
+            mood: 'Sleepy',
+            goldensCaught: 0,
+            powerUpsUsed: 0,
+            prestige: 0,
+            prestigeMulti: 1,
+            totalPrestiges: 0,
+            bossesDefeated: 0,
+            minigamesPlayed: 0,
+            minigameTreats: 0,
+            hasWon: false,
+            lifetimeTreats: 0,
+            adminPerSecBonus: 0
+        };
+        let currentShopTab = 'auto';
+
+        // ===== Shop Items =====
+        const shopData = [
+            // ----- AUTO GENERATORS -----
+            { id: 'puppy', name: 'Puppy Helper', icon: '🐶', desc: 'A tiny pup fetches treats', baseCost: 15, perSec: 0.1, perClick: 0, category: 'auto' },
+            { id: 'kennel', name: 'Dog Kennel', icon: '🏠', desc: 'Houses dogs to find treats', baseCost: 100, perSec: 1, perClick: 0, category: 'auto' },
+            { id: 'park', name: 'Dog Park', icon: '🌳', desc: 'Dogs gathering treats', baseCost: 500, perSec: 5, perClick: 0, category: 'auto' },
+            { id: 'groomer', name: 'Dog Groomer', icon: '✂️', desc: 'Happy dogs produce more', baseCost: 1200, perSec: 12, perClick: 0, category: 'auto' },
+            { id: 'truck', name: 'Treat Truck', icon: '🚛', desc: 'Delivers by the truckload', baseCost: 3000, perSec: 30, perClick: 0, category: 'auto' },
+            { id: 'factory', name: 'Treat Factory', icon: '🏭', desc: 'Industrial-scale production', baseCost: 8000, perSec: 80, perClick: 0, category: 'auto' },
+            { id: 'rocket', name: 'Dog Rocket', icon: '🚀', desc: 'Dogs in SPACE!', baseCost: 50000, perSec: 500, perClick: 0, category: 'auto' },
+            { id: 'portal', name: 'Treat Portal', icon: '🌀', desc: 'Portal to treat dimension', baseCost: 200000, perSec: 3000, perClick: 0, category: 'auto' },
+            { id: 'satellite', name: 'Treat Satellite', icon: '🛰️', desc: 'Orbiting treat scanner', baseCost: 1000000, perSec: 15000, perClick: 0, category: 'auto' },
+            { id: 'black_hole', name: 'Treat Singularity', icon: '🕳️', desc: 'Warps reality for treats', baseCost: 10000000, perSec: 100000, perClick: 0, category: 'auto' },
+            { id: 'multiverse', name: 'Treat Multiverse', icon: '🌌', desc: 'Infinite universe treats!', baseCost: 100000000, perSec: 1000000, perClick: 0, category: 'auto' },
+
+            // ----- CLICK UPGRADES -----
+            { id: 'ball', name: 'Tennis Ball', icon: '🎾', desc: '+1 per click', baseCost: 50, perSec: 0, perClick: 1, category: 'click' },
+            { id: 'bone', name: 'Golden Bone', icon: '🦴', desc: '+5 per click', baseCost: 250, perSec: 0, perClick: 5, category: 'click' },
+            { id: 'steak', name: 'Wagyu Steak', icon: '🥩', desc: '+20 per click', baseCost: 2000, perSec: 0, perClick: 20, category: 'click' },
+            { id: 'collar', name: 'Diamond Collar', icon: '💎', desc: '+50 per click', baseCost: 15000, perSec: 0, perClick: 50, category: 'click' },
+            { id: 'crown', name: 'Royal Crown', icon: '👑', desc: '+200 per click', baseCost: 100000, perSec: 0, perClick: 200, category: 'click' },
+            { id: 'scepter', name: 'Cosmic Scepter', icon: '🔮', desc: '+1,000 per click', baseCost: 1000000, perSec: 0, perClick: 1000, category: 'click' },
+            { id: 'infinity_paw', name: 'Infinity Paw', icon: '🐾', desc: '+10,000 per click', baseCost: 50000000, perSec: 0, perClick: 10000, category: 'click' },
+
+            // ----- SPECIAL UPGRADES -----
+            { id: 'treat_bag', name: 'Treat Bag', icon: '👜', desc: '2x click power', baseCost: 5000, perSec: 0, perClick: 0, clickMultiplier: 2, maxOwn: 1, category: 'special' },
+            { id: 'dogwhistle', name: 'Dog Whistle', icon: '📯', desc: '2x auto-production', baseCost: 20000, perSec: 0, perClick: 0, autoMultiplier: 2, maxOwn: 1, category: 'special' },
+            { id: 'lucky_charm', name: 'Lucky Charm', icon: '🍀', desc: 'Golden bones 2x more often', baseCost: 10000, perSec: 0, perClick: 0, goldenBoost: true, maxOwn: 1, category: 'special' },
+            { id: 'megaphone', name: 'Mega Bark', icon: '📢', desc: '3x click power', baseCost: 200000, perSec: 0, perClick: 0, clickMultiplier: 3, maxOwn: 1, category: 'special' },
+            { id: 'golden_leash', name: 'Golden Leash', icon: '🏅', desc: '3x auto-production', baseCost: 500000, perSec: 0, perClick: 0, autoMultiplier: 3, maxOwn: 1, category: 'special' },
+            { id: 'dog_army', name: 'Dog Army', icon: '🐕‍🦺', desc: '5x auto-production', baseCost: 5000000, perSec: 0, perClick: 0, autoMultiplier: 5, maxOwn: 1, category: 'special' },
+            { id: 'time_bone', name: 'Time Bone', icon: '⏳', desc: 'Power-up cooldowns halved', baseCost: 2000000, perSec: 0, perClick: 0, cooldownReduce: true, maxOwn: 1, category: 'special' },
+            { id: 'love', name: 'Unconditional Love', icon: '❤️', desc: '3x EVERYTHING!', baseCost: 500000, perSec: 0, perClick: 0, globalMultiplier: 3, maxOwn: 1, category: 'special' },
+            { id: 'paradise_ticket', name: 'Treat World Ticket', icon: '🎫', desc: 'Required to reach Treat World!', baseCost: 500000000, perSec: 0, perClick: 0, maxOwn: 1, category: 'special', isEndgame: true },
+        ];
+
+        // ===== Power-ups =====
+        const powerUps = [
+            { id: 'frenzy', name: 'Treat Frenzy', icon: '🔥', desc: '7x clicks for 10s', duration: 10, cooldown: 60, cost: 200, unlockAt: 500 },
+            { id: 'autopet', name: 'Auto Petter', icon: '🤖', desc: '10 auto-clicks/sec for 15s', duration: 15, cooldown: 90, cost: 800, unlockAt: 2000 },
+            { id: 'rain', name: 'Treat Rain', icon: '🌧️', desc: '3x all production for 20s', duration: 20, cooldown: 120, cost: 3000, unlockAt: 10000 },
+            { id: 'magnet', name: 'Treat Magnet', icon: '🧲', desc: '5x golden bone rewards for 30s', duration: 30, cooldown: 150, cost: 25000, unlockAt: 100000 },
+        ];
+
+        let powerUpState = {};
+        powerUps.forEach(p => {
+            powerUpState[p.id] = { active: false, cooldown: 0, remaining: 0 };
+        });
+
+        // ===== Achievements =====
+        const achievements = [
+            { id: 'click10', name: '🐾 First Steps', desc: '10 clicks!', check: () => game.totalClicks >= 10 },
+            { id: 'click100', name: '🐾 Clicker Pro', desc: '100 clicks!', check: () => game.totalClicks >= 100 },
+            { id: 'click500', name: '🐾 Click Warrior', desc: '500 clicks!', check: () => game.totalClicks >= 500 },
+            { id: 'click1000', name: '🐾 Click Master', desc: '1,000 clicks!', check: () => game.totalClicks >= 1000 },
+            { id: 'click5000', name: '🐾 Click Legend', desc: '5,000 clicks!', check: () => game.totalClicks >= 5000 },
+            { id: 'click10k', name: '🐾 Click GOD', desc: '10,000 clicks!', check: () => game.totalClicks >= 10000 },
+            { id: 'treats100', name: '🦴 Treat Finder', desc: '100 total treats!', check: () => game.totalTreats >= 100 },
+            { id: 'treats1k', name: '🦴 Treat Hoarder', desc: '1K total treats!', check: () => game.totalTreats >= 1000 },
+            { id: 'treats10k', name: '🦴 Treat Baron', desc: '10K total treats!', check: () => game.totalTreats >= 10000 },
+            { id: 'treats100k', name: '🦴 Treat Tycoon', desc: '100K total treats!', check: () => game.totalTreats >= 100000 },
+            { id: 'treats1m', name: '🦴 Treat Mogul', desc: '1M total treats!', check: () => game.totalTreats >= 1000000 },
+            { id: 'treats10m', name: '🦴 Treat Emperor', desc: '10M total treats!', check: () => game.totalTreats >= 10000000 },
+            { id: 'treats100m', name: '🦴 Treat God', desc: '100M total treats!', check: () => game.totalTreats >= 100000000 },
+            { id: 'treats1b', name: '🦴 TREAT OVERLORD', desc: '1B total treats!', check: () => game.totalTreats >= 1000000000 },
+            { id: 'upgrade1', name: '🛒 First Purchase', desc: 'Bought 1 upgrade!', check: () => getTotalUpgrades() >= 1 },
+            { id: 'upgrade10', name: '🛒 Shopaholic', desc: '10 upgrades!', check: () => getTotalUpgrades() >= 10 },
+            { id: 'upgrade25', name: '🛒 Big Spender', desc: '25 upgrades!', check: () => getTotalUpgrades() >= 25 },
+            { id: 'upgrade50', name: '🛒 Treat Mogul', desc: '50 upgrades!', check: () => getTotalUpgrades() >= 50 },
+            { id: 'upgrade100', name: '🛒 Shop Legend', desc: '100 upgrades!', check: () => getTotalUpgrades() >= 100 },
+            { id: 'persec10', name: '⚡ Auto Doggo', desc: '10 treats/sec!', check: () => game.perSecond >= 10 },
+            { id: 'persec100', name: '⚡ Treat Machine', desc: '100 treats/sec!', check: () => game.perSecond >= 100 },
+            { id: 'persec1k', name: '⚡ Treat Empire', desc: '1K treats/sec!', check: () => game.perSecond >= 1000 },
+            { id: 'persec10k', name: '⚡ Treat Galaxy', desc: '10K treats/sec!', check: () => game.perSecond >= 10000 },
+            { id: 'persec100k', name: '⚡ Treat Universe', desc: '100K treats/sec!', check: () => game.perSecond >= 100000 },
+            { id: 'combo5', name: '🔥 Combo Starter', desc: '5x combo!', check: () => game.maxCombo >= 5 },
+            { id: 'combo10', name: '🔥 Combo King', desc: '10x combo!', check: () => game.maxCombo >= 10 },
+            { id: 'combo25', name: '🔥 Combo GOD', desc: '25x combo!', check: () => game.maxCombo >= 25 },
+            { id: 'golden1', name: '✨ Lucky Dog', desc: 'Caught 1 golden bone!', check: () => game.goldensCaught >= 1 },
+            { id: 'golden10', name: '✨ Golden Hunter', desc: 'Caught 10!', check: () => game.goldensCaught >= 10 },
+            { id: 'golden25', name: '✨ Golden Master', desc: 'Caught 25!', check: () => game.goldensCaught >= 25 },
+            { id: 'powerup1', name: '⚡ Power Up!', desc: 'Used a power-up!', check: () => game.powerUpsUsed >= 1 },
+            { id: 'powerup10', name: '⚡ Power Addict', desc: 'Used 10!', check: () => game.powerUpsUsed >= 10 },
+            { id: 'prestige1', name: '🔮 Reborn', desc: 'First rebirth!', check: () => game.totalPrestiges >= 1 },
+            { id: 'prestige3', name: '🔮 Born Again x3', desc: '3 rebirths!', check: () => game.totalPrestiges >= 3 },
+            { id: 'prestige5', name: '🔮 Eternal Dog', desc: '5 rebirths!', check: () => game.totalPrestiges >= 5 },
+            { id: 'boss1', name: '⚔️ Boss Slayer', desc: 'Defeated 1 boss!', check: () => game.bossesDefeated >= 1 },
+            { id: 'boss5', name: '⚔️ Boss Hunter', desc: 'Defeated 5 bosses!', check: () => game.bossesDefeated >= 5 },
+            { id: 'boss10', name: '⚔️ Boss Master', desc: 'Defeated 10 bosses!', check: () => game.bossesDefeated >= 10 },
+            { id: 'mini1', name: '🎮 Mini Gamer', desc: 'Played a mini-game!', check: () => game.minigamesPlayed >= 1 },
+            { id: 'mini5', name: '🎮 Mini Pro', desc: 'Played 5 mini-games!', check: () => game.minigamesPlayed >= 5 },
+            { id: 'paradise', name: '� TREAT WORLD', desc: 'Reached Treat World! YOU WIN!', check: () => game.hasWon },
+        ];
+        let unlockedAchievements = new Set();
+
+        // ===== Milestones =====
+        const milestones = [
+            { at: 1000, reward: 'click', value: 2, msg: '🎉 1K Treats! +2 click power!' },
+            { at: 10000, reward: 'auto', value: 1.5, msg: '🎉 10K Treats! 1.5x auto!' },
+            { at: 100000, reward: 'click', value: 10, msg: '🎉 100K Treats! +10 click!' },
+            { at: 500000, reward: 'auto', value: 2, msg: '🎉 500K Treats! 2x auto!' },
+            { at: 1000000, reward: 'all', value: 2, msg: '🎉 1M Treats! 2x EVERYTHING!' },
+            { at: 5000000, reward: 'click', value: 50, msg: '🎉 5M Treats! +50 click!' },
+            { at: 10000000, reward: 'auto', value: 3, msg: '🎉 10M Treats! 3x auto!' },
+            { at: 50000000, reward: 'all', value: 2, msg: '🎉 50M Treats! 2x EVERYTHING!' },
+            { at: 100000000, reward: 'click', value: 200, msg: '🎉 100M Treats! +200 click!' },
+            { at: 500000000, reward: 'all', value: 3, msg: '🎉 500M Treats! 3x EVERYTHING!' },
+        ];
+        let unlockedMilestones = new Set();
+
+        // ===== Bosses =====
+        const bossTypes = [
+            { name: 'Big Bad Wolf', emoji: '🐺', hp: 500, time: 30, reward: 5000 },
+            { name: 'Cat Burglar', emoji: '🐱', hp: 2000, time: 30, reward: 25000 },
+            { name: 'Treat Thief', emoji: '🦝', hp: 10000, time: 30, reward: 150000 },
+            { name: 'Vacuum Monster', emoji: '👹', hp: 50000, time: 35, reward: 750000 },
+            { name: 'Dr. No-Treats', emoji: '🧟', hp: 250000, time: 40, reward: 5000000 },
+            { name: 'The Cat King', emoji: '😈', hp: 1000000, time: 45, reward: 25000000 },
+            { name: 'Void Dogcatcher', emoji: '👾', hp: 10000000, time: 50, reward: 200000000 },
+        ];
+
+        let bossState = {
+            active: false,
+            bossIndex: 0,
+            hp: 0,
+            maxHp: 0,
+            timer: 0,
+            reward: 0
+        };
+
+        // ===== Mini-Game State =====
+        let miniState = {
+            active: false,
+            timer: 0,
+            caught: 0,
+            interval: null,
+            spawnInterval: null
+        };
+
+        // ===== Sound Effects =====
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(freq, duration, type = 'sine', volume = 0.15) {
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.value = volume;
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function playClickSound() { playSound(600 + Math.min(game.combo * 30, 800), 0.08, 'square', 0.08); }
+        function playBuySound() {
+            playSound(523, 0.1, 'sine', 0.12);
+            setTimeout(() => playSound(659, 0.1, 'sine', 0.12), 80);
+            setTimeout(() => playSound(784, 0.15, 'sine', 0.12), 160);
+        }
+        function playGoldenSound() {
+            playSound(880, 0.15, 'sine', 0.2);
+            setTimeout(() => playSound(1100, 0.15, 'sine', 0.2), 100);
+            setTimeout(() => playSound(1320, 0.2, 'sine', 0.2), 200);
+            setTimeout(() => playSound(1760, 0.3, 'sine', 0.15), 300);
+        }
+        function playMilestoneSound() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playSound(f, 0.2, 'sine', 0.15), i * 120)); }
+        function playBossHitSound() { playSound(200 + Math.random() * 200, 0.06, 'sawtooth', 0.1); }
+        function playBossDefeatSound() {
+            [523, 659, 784, 1047, 1318].forEach((f, i) => setTimeout(() => playSound(f, 0.25, 'sine', 0.18), i * 100));
+        }
+        function playWinSound() {
+            if (!audioCtx) initAudio();
+            const ctx = audioCtx;
+            const now = ctx.currentTime;
+
+            // Full victory melody — happy, celebratory tune
+            const melody = [
+                // Note, start time (s), duration (s), waveform, volume
+                // Intro fanfare
+                { f: 523, t: 0.0, d: 0.2, w: 'sine', v: 0.15 },    // C5
+                { f: 523, t: 0.2, d: 0.2, w: 'sine', v: 0.15 },    // C5
+                { f: 659, t: 0.4, d: 0.3, w: 'sine', v: 0.15 },    // E5
+                { f: 784, t: 0.7, d: 0.4, w: 'sine', v: 0.18 },    // G5
+
+                // Main melody line
+                { f: 784, t: 1.2, d: 0.2, w: 'sine', v: 0.16 },    // G5
+                { f: 880, t: 1.4, d: 0.2, w: 'sine', v: 0.16 },    // A5
+                { f: 988, t: 1.6, d: 0.2, w: 'sine', v: 0.16 },    // B5
+                { f: 1047, t: 1.8, d: 0.5, w: 'sine', v: 0.18 },   // C6
+                { f: 988, t: 2.3, d: 0.2, w: 'sine', v: 0.14 },    // B5
+                { f: 1047, t: 2.5, d: 0.2, w: 'sine', v: 0.16 },   // C6
+                { f: 1175, t: 2.7, d: 0.5, w: 'sine', v: 0.18 },   // D6
+
+                // Second phrase - uplifting
+                { f: 1047, t: 3.3, d: 0.2, w: 'sine', v: 0.14 },   // C6
+                { f: 1175, t: 3.5, d: 0.2, w: 'sine', v: 0.15 },   // D6
+                { f: 1319, t: 3.7, d: 0.2, w: 'sine', v: 0.16 },   // E6
+                { f: 1568, t: 3.9, d: 0.6, w: 'sine', v: 0.18 },   // G6
+                { f: 1319, t: 4.5, d: 0.15, w: 'sine', v: 0.13 },  // E6
+                { f: 1568, t: 4.65, d: 0.15, w: 'sine', v: 0.14 }, // G6
+                { f: 2093, t: 4.8, d: 0.8, w: 'sine', v: 0.16 },   // C7 (climax)
+
+                // Harmony chords underneath
+                { f: 262, t: 0.0, d: 1.0, w: 'triangle', v: 0.08 },  // C4 bass
+                { f: 330, t: 0.0, d: 1.0, w: 'triangle', v: 0.06 },  // E4
+                { f: 392, t: 1.2, d: 1.0, w: 'triangle', v: 0.08 },  // G4
+                { f: 494, t: 1.2, d: 1.0, w: 'triangle', v: 0.06 },  // B4
+                { f: 349, t: 2.5, d: 1.0, w: 'triangle', v: 0.08 },  // F4
+                { f: 440, t: 2.5, d: 1.0, w: 'triangle', v: 0.06 },  // A4
+                { f: 262, t: 3.7, d: 1.5, w: 'triangle', v: 0.08 },  // C4
+                { f: 330, t: 3.7, d: 1.5, w: 'triangle', v: 0.06 },  // E4
+                { f: 392, t: 3.7, d: 1.5, w: 'triangle', v: 0.06 },  // G4
+
+                // Final grand chord
+                { f: 262, t: 5.8, d: 2.5, w: 'sine', v: 0.10 },    // C4
+                { f: 330, t: 5.8, d: 2.5, w: 'sine', v: 0.08 },    // E4
+                { f: 392, t: 5.8, d: 2.5, w: 'sine', v: 0.08 },    // G4
+                { f: 523, t: 5.8, d: 2.5, w: 'sine', v: 0.10 },    // C5
+                { f: 784, t: 5.8, d: 2.5, w: 'sine', v: 0.08 },    // G5
+                { f: 1047, t: 5.8, d: 2.5, w: 'sine', v: 0.08 },   // C6
+                { f: 1568, t: 5.8, d: 2.5, w: 'triangle', v: 0.06 }, // G6
+                { f: 2093, t: 5.8, d: 3.0, w: 'triangle', v: 0.05 }, // C7
+            ];
+
+            melody.forEach(n => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = n.w;
+                osc.frequency.value = n.f;
+                gain.gain.setValueAtTime(0, now + n.t);
+                gain.gain.linearRampToValueAtTime(n.v, now + n.t + 0.03);
+                gain.gain.setValueAtTime(n.v, now + n.t + n.d * 0.7);
+                gain.gain.linearRampToValueAtTime(0, now + n.t + n.d);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + n.t);
+                osc.stop(now + n.t + n.d + 0.05);
+            });
+
+            // Sparkle shimmer at the end
+            for (let i = 0; i < 12; i++) {
+                const t = 6.5 + i * 0.2;
+                const f = 2000 + Math.random() * 3000;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = f;
+                gain.gain.setValueAtTime(0, now + t);
+                gain.gain.linearRampToValueAtTime(0.04, now + t + 0.02);
+                gain.gain.linearRampToValueAtTime(0, now + t + 0.4);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + t);
+                osc.stop(now + t + 0.45);
+            }
+        }
+
+        // ===== Helper Functions =====
+        function formatNumber(num) {
+            if (num >= 1e15) return (num / 1e15).toFixed(1) + 'Q';
+            if (num >= 1e12) return (num / 1e12).toFixed(1) + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+            return Math.floor(num).toString();
+        }
+
+        function getCost(item) {
+            const owned = game.upgrades[item.id] || 0;
+            return Math.floor(item.baseCost * Math.pow(1.15, owned));
+        }
+
+        function getTotalUpgrades() {
+            let total = 0;
+            for (let key in game.upgrades) total += game.upgrades[key];
+            return total;
+        }
+
+        // ===== Multiplier System =====
+        function getMultipliers() {
+            let clickMulti = 1;
+            let autoMulti = 1;
+            let globalMulti = game.prestigeMulti;
+
+            shopData.forEach(item => {
+                const owned = game.upgrades[item.id] || 0;
+                if (owned > 0) {
+                    if (item.clickMultiplier) clickMulti *= item.clickMultiplier;
+                    if (item.autoMultiplier) autoMulti *= item.autoMultiplier;
+                    if (item.globalMultiplier) globalMulti *= item.globalMultiplier;
+                }
+            });
+
+            milestones.forEach(m => {
+                if (unlockedMilestones.has(m.at)) {
+                    if (m.reward === 'auto') autoMulti *= m.value;
+                    if (m.reward === 'all') { clickMulti *= m.value; autoMulti *= m.value; }
+                }
+            });
+
+            if (powerUpState.frenzy && powerUpState.frenzy.active) clickMulti *= 7;
+            if (powerUpState.rain && powerUpState.rain.active) autoMulti *= 3;
+
+            globalMulti *= game.moodMultiplier;
+
+            return { clickMulti, autoMulti, globalMulti };
+        }
+
+        function getMilestoneBonusClick() {
+            let bonus = 0;
+            milestones.forEach(m => {
+                if (unlockedMilestones.has(m.at) && m.reward === 'click') bonus += m.value;
+            });
+            return bonus;
+        }
+
+        function recalcPerSecond() {
+            let ps = 0;
+            const { autoMulti, globalMulti } = getMultipliers();
+            shopData.forEach(item => {
+                const owned = game.upgrades[item.id] || 0;
+                ps += item.perSec * owned;
+            });
+            game.perSecond = ps * autoMulti * globalMulti + (game.adminPerSecBonus || 0);
+        }
+
+        function recalcClickPower() {
+            let cp = 1 + getMilestoneBonusClick();
+            const { clickMulti, globalMulti } = getMultipliers();
+            shopData.forEach(item => {
+                const owned = game.upgrades[item.id] || 0;
+                cp += item.perClick * owned;
+            });
+            game.clickPower = cp * clickMulti * globalMulti;
+        }
+
+        function getEffectiveClick() {
+            return game.clickPower * getComboMultiplier();
+        }
+
+        // ===== Combo System =====
+        let comboDecayTimer = null;
+
+        function updateCombo() {
+            const now = Date.now();
+            if (now - game.lastClickTime < 400) game.combo = Math.min(game.combo + 1, 50);
+            else if (now - game.lastClickTime > 800) game.combo = 1;
+            game.lastClickTime = now;
+            if (game.combo > game.maxCombo) game.maxCombo = game.combo;
+
+            clearTimeout(comboDecayTimer);
+            comboDecayTimer = setTimeout(() => { game.combo = 0; updateComboDisplay(); }, 1200);
+            updateComboDisplay();
+        }
+
+        function updateComboDisplay() {
+            const el = document.getElementById('comboDisplay');
+            if (game.combo >= 2) {
+                el.style.display = 'block';
+                el.textContent = game.combo + 'x COMBO!';
+                el.style.transform = 'scale(' + (1 + game.combo * 0.015) + ')';
+                if (game.combo >= 25) el.style.color = '#ff0000';
+                else if (game.combo >= 15) el.style.color = '#ff6600';
+                else if (game.combo >= 8) el.style.color = '#ffaa00';
+                else el.style.color = '#FFD700';
+            } else el.style.display = 'none';
+        }
+
+        function getComboMultiplier() {
+            return game.combo < 2 ? 1 : 1 + (game.combo * 0.1);
+        }
+
+        // ===== Mood System =====
+        function updateMood() {
+            const tps = game.perSecond;
+            let mood, emoji, multi;
+            if (tps >= 100000) { mood = 'GODLIKE'; emoji = '🌟'; multi = 3.0; }
+            else if (tps >= 10000) { mood = 'LEGENDARY'; emoji = '👑'; multi = 2.5; }
+            else if (tps >= 1000) { mood = 'Ascended'; emoji = '✨'; multi = 2.0; }
+            else if (tps >= 100) { mood = 'Ecstatic'; emoji = '🤩'; multi = 1.5; }
+            else if (tps >= 10) { mood = 'Excited'; emoji = '😆'; multi = 1.2; }
+            else if (tps >= 1) { mood = 'Happy'; emoji = '😊'; multi = 1.1; }
+            else if (tps > 0) { mood = 'Content'; emoji = '🐕'; multi = 1.05; }
+            else { mood = 'Sleepy'; emoji = '😴'; multi = 1.0; }
+
+            const changed = game.mood !== mood;
+            game.mood = mood;
+            game.moodMultiplier = multi;
+            const moodEl = document.getElementById('moodDisplay');
+            moodEl.innerHTML = emoji + ' Linda is ' + mood + ' <span style="font-size:0.75rem;opacity:0.7">(x' + multi.toFixed(1) + ')</span>';
+            if (changed) {
+                moodEl.style.transform = 'scale(1.1)';
+                setTimeout(() => moodEl.style.transform = 'scale(1)', 300);
+                recalcPerSecond();
+                recalcClickPower();
+            }
+        }
+
+        // ===== Golden Bone =====
+        let goldenBoneTimer = null, goldenBoneTimeout = null;
+
+        function getGoldenDelay() {
+            const hasCharm = (game.upgrades['lucky_charm'] || 0) > 0;
+            return (hasCharm ? 12000 : 25000) + Math.random() * (hasCharm ? 18000 : 35000);
+        }
+
+        function scheduleGoldenBone() {
+            clearTimeout(goldenBoneTimer);
+            goldenBoneTimer = setTimeout(spawnGoldenBone, getGoldenDelay());
+        }
+
+        function spawnGoldenBone() {
+            if (bossState.active || miniState.active) { scheduleGoldenBone(); return; }
+            const bone = document.getElementById('goldenBone');
+            bone.style.left = (10 + Math.random() * 70) + '%';
+            bone.style.top = (15 + Math.random() * 60) + '%';
+            bone.style.display = 'block';
+            bone.classList.add('golden-pulse');
+            goldenBoneTimeout = setTimeout(() => { bone.style.display = 'none'; bone.classList.remove('golden-pulse'); scheduleGoldenBone(); }, 6000);
+        }
+
+        function clickGoldenBone() {
+            const bone = document.getElementById('goldenBone');
+            bone.style.display = 'none';
+            bone.classList.remove('golden-pulse');
+            clearTimeout(goldenBoneTimeout);
+
+            let reward = Math.max(game.clickPower * 15 + game.treats * 0.1, 100);
+            if (powerUpState.magnet && powerUpState.magnet.active) reward *= 5;
+            game.treats += reward;
+            game.totalTreats += reward;
+            game.lifetimeTreats += reward;
+            game.goldensCaught++;
+
+            showGoldenReward(reward);
+            screenShake();
+            playGoldenSound();
+            spawnTreatRain(8);
+            updateDisplay();
+            checkAchievements();
+            checkMilestones();
+            checkWinCondition();
+            saveGame();
+            scheduleGoldenBone();
+        }
+
+        function showGoldenReward(amount) {
+            const popup = document.createElement('div');
+            popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:Fredoka One,sans-serif;font-size:2.5rem;color:#FFD700;text-shadow:0 0 20px rgba(255,215,0,0.8),0 0 40px rgba(255,215,0,0.4);z-index:9999;pointer-events:none;animation:goldenRewardAnim 1.5s ease-out forwards;';
+            popup.textContent = '✨ +' + formatNumber(amount) + ' ✨';
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 1500);
+        }
+
+        function screenShake() {
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 300);
+        }
+
+        function spawnTreatRain(count) {
+            const treats = ['🦴', '🐾', '🎾', '❤️', '⭐', '🌟'];
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const el = document.createElement('div');
+                    el.className = 'treat-rain-particle';
+                    el.textContent = treats[Math.floor(Math.random() * treats.length)];
+                    el.style.left = (Math.random() * 100) + 'vw';
+                    el.style.animationDuration = (1.5 + Math.random()) + 's';
+                    document.body.appendChild(el);
+                    setTimeout(() => el.remove(), 3000);
+                }, i * 100);
+            }
+        }
+
+        // ===== Power-ups =====
+        function getCooldownMulti() {
+            return (game.upgrades['time_bone'] || 0) > 0 ? 0.5 : 1;
+        }
+
+        function activatePowerUp(powerUp) {
+            const state = powerUpState[powerUp.id];
+            if (state.active || state.cooldown > 0 || game.treats < powerUp.cost) return;
+            game.treats -= powerUp.cost;
+            state.active = true;
+            state.remaining = powerUp.duration;
+            game.powerUpsUsed++;
+            if (powerUp.id === 'rain') spawnTreatRain(15);
+            playBuySound();
+            recalcPerSecond();
+            recalcClickPower();
+            updateDisplay();
+            renderPowerUps();
+            checkAchievements();
+            saveGame();
+        }
+
+        function tickPowerUps(delta) {
+            let needsRecalc = false;
+            powerUps.forEach(p => {
+                const state = powerUpState[p.id];
+                if (!state) return;
+                if (state.active) {
+                    state.remaining -= delta;
+                    if (state.remaining <= 0) {
+                        state.active = false;
+                        state.remaining = 0;
+                        state.cooldown = p.cooldown * getCooldownMulti();
+                        needsRecalc = true;
+                    }
+                } else if (state.cooldown > 0) {
+                    state.cooldown = Math.max(0, state.cooldown - delta);
+                }
+            });
+            if (needsRecalc) { recalcPerSecond(); recalcClickPower(); }
+        }
+
+        function renderPowerUps() {
+            const container = document.getElementById('powerUpsBar');
+            container.innerHTML = '';
+            let anyVisible = false;
+            powerUps.forEach(p => {
+                if (game.totalTreats < p.unlockAt && game.lifetimeTreats < p.unlockAt) return;
+                anyVisible = true;
+                const state = powerUpState[p.id];
+                if (!state) return;
+                const canAfford = game.treats >= p.cost;
+                const btn = document.createElement('button');
+                let cls = 'power-up-btn';
+                if (state.active) cls += ' active';
+                else if (state.cooldown > 0) cls += ' cooldown';
+                else if (!canAfford) cls += ' no-afford';
+                btn.className = cls;
+
+                let statusText = '';
+                if (state.active) statusText = Math.ceil(state.remaining) + 's';
+                else if (state.cooldown > 0) statusText = Math.ceil(state.cooldown) + 's CD';
+                else statusText = '🦴' + formatNumber(p.cost);
+
+                btn.innerHTML = '<span class="pu-icon">' + p.icon + '</span><span class="pu-name">' + p.name + '</span><span class="pu-status">' + statusText + '</span>';
+                btn.title = p.desc;
+                btn.onclick = () => activatePowerUp(p);
+
+                if (state.active || state.cooldown > 0) {
+                    const bar = document.createElement('div');
+                    bar.className = 'pu-progress';
+                    const effCD = p.cooldown * getCooldownMulti();
+                    const pct = state.active ? (state.remaining / p.duration * 100) : ((effCD - state.cooldown) / effCD * 100);
+                    bar.style.width = pct + '%';
+                    bar.style.background = state.active ? 'rgba(76,175,80,0.5)' : 'rgba(255,255,255,0.15)';
+                    btn.appendChild(bar);
+                }
+                container.appendChild(btn);
+            });
+
+            if (!anyVisible && game.totalTreats >= powerUps[0].unlockAt * 0.5) {
+                const hint = document.createElement('div');
+                hint.style.cssText = 'color:rgba(255,255,255,0.4);font-size:0.8rem;text-align:center;';
+                hint.textContent = '⚡ Power-ups unlock at ' + formatNumber(powerUps[0].unlockAt) + ' total treats';
+                container.appendChild(hint);
+            }
+        }
+
+        function autoClickTick(delta) {
+            if (powerUpState.autopet && powerUpState.autopet.active) {
+                const earned = game.clickPower * 10 * delta;
+                game.treats += earned;
+                game.totalTreats += earned;
+                game.lifetimeTreats += earned;
+            }
+        }
+
+        // ===== Boss Fight =====
+        let bossTickInterval = null;
+
+        function getNextBoss() {
+            const idx = Math.min(game.bossesDefeated, bossTypes.length - 1);
+            const boss = bossTypes[idx];
+            const scale = Math.pow(1.5, Math.max(0, game.bossesDefeated - bossTypes.length + 1));
+            return {
+                ...boss,
+                hp: Math.floor(boss.hp * scale),
+                reward: Math.floor(boss.reward * scale * game.prestigeMulti)
+            };
+        }
+
+        function canFightBoss() {
+            return game.totalTreats >= 5000 && !bossState.active && !miniState.active;
+        }
+
+        function startBossFight() {
+            if (!canFightBoss()) return;
+            initAudio();
+            const boss = getNextBoss();
+            bossState = { active: true, bossIndex: game.bossesDefeated, hp: boss.hp, maxHp: boss.hp, timer: boss.time, reward: boss.reward };
+
+            document.getElementById('bossTitle').textContent = '⚔️ ' + boss.name + '! ⚔️';
+            document.getElementById('bossSprite').textContent = boss.emoji;
+            document.getElementById('bossHpFill').style.width = '100%';
+            document.getElementById('bossHpText').textContent = 'HP: ' + formatNumber(boss.hp) + ' / ' + formatNumber(boss.hp);
+            document.getElementById('bossTimer').textContent = boss.time + 's';
+            document.getElementById('bossRewardText').textContent = 'Reward: ' + formatNumber(boss.reward) + ' treats!';
+            document.getElementById('bossOverlay').classList.add('active');
+
+            playSound(150, 0.5, 'sawtooth', 0.15);
+
+            bossTickInterval = setInterval(() => {
+                bossState.timer -= 0.1;
+                document.getElementById('bossTimer').textContent = Math.ceil(bossState.timer) + 's';
+                if (bossState.timer <= 0) endBossFight(false);
+            }, 100);
+        }
+
+        function hitBoss() {
+            if (!bossState.active) return;
+            const dmg = getEffectiveClick();
+            bossState.hp -= dmg;
+            playBossHitSound();
+
+            const sprite = document.getElementById('bossSprite');
+            sprite.classList.remove('boss-hit');
+            void sprite.offsetWidth;
+            sprite.classList.add('boss-hit');
+
+            const pct = Math.max(0, bossState.hp / bossState.maxHp * 100);
+            document.getElementById('bossHpFill').style.width = pct + '%';
+            document.getElementById('bossHpText').textContent = 'HP: ' + formatNumber(Math.max(0, bossState.hp)) + ' / ' + formatNumber(bossState.maxHp);
+
+            if (bossState.hp <= 0) endBossFight(true);
+        }
+
+        function endBossFight(won) {
+            clearInterval(bossTickInterval);
+            bossState.active = false;
+            if (won) {
+                game.treats += bossState.reward;
+                game.totalTreats += bossState.reward;
+                game.lifetimeTreats += bossState.reward;
+                game.bossesDefeated++;
+                playBossDefeatSound();
+                showGoldenReward(bossState.reward);
+                screenShake();
+                spawnTreatRain(20);
+                showMilestone('⚔️ Boss Defeated! +' + formatNumber(bossState.reward) + ' treats!');
+            } else {
+                showMilestone('💀 Boss escaped! Try again...');
+                playSound(100, 0.5, 'sawtooth', 0.1);
+            }
+            setTimeout(() => {
+                document.getElementById('bossOverlay').classList.remove('active');
+                updateDisplay();
+                checkAchievements();
+                checkWinCondition();
+                renderEvents();
+                saveGame();
+            }, won ? 1000 : 500);
+        }
+
+        // ===== Mini-Game: Treat Catch =====
+        function canPlayMinigame() {
+            return game.totalTreats >= 1000 && !miniState.active && !bossState.active;
+        }
+
+        function startMinigame() {
+            if (!canPlayMinigame()) return;
+            initAudio();
+            miniState = { active: true, timer: 15, caught: 0, interval: null, spawnInterval: null };
+            document.getElementById('minigameOverlay').classList.add('active');
+            document.getElementById('minigameArea').innerHTML = '';
+            document.getElementById('minigameScore').textContent = 'Caught: 0';
+            document.getElementById('minigameTimer').textContent = '15s';
+            game.minigamesPlayed++;
+
+            miniState.spawnInterval = setInterval(spawnMinigameTreat, 600);
+            miniState.interval = setInterval(() => {
+                miniState.timer -= 0.1;
+                document.getElementById('minigameTimer').textContent = Math.ceil(miniState.timer) + 's';
+                if (miniState.timer <= 0) endMinigame();
+            }, 100);
+        }
+
+        function spawnMinigameTreat() {
+            if (!miniState.active) return;
+            const area = document.getElementById('minigameArea');
+            const isBomb = Math.random() < 0.2;
+            const el = document.createElement('div');
+            el.className = isBomb ? 'falling-bomb' : 'falling-treat';
+            el.textContent = isBomb ? '💣' : ['🦴', '🐾', '🎾', '⭐', '🍖'][Math.floor(Math.random() * 5)];
+            el.style.left = (10 + Math.random() * 80) + '%';
+            el.style.top = '-30px';
+
+            let y = -30;
+            const speed = 2 + Math.random() * 3;
+            const drift = (Math.random() - 0.5) * 2;
+            const moveInterval = setInterval(() => {
+                if (!miniState.active) { clearInterval(moveInterval); el.remove(); return; }
+                y += speed;
+                const curLeft = parseFloat(el.style.left);
+                el.style.top = y + 'px';
+                el.style.left = (curLeft + drift * 0.1) + '%';
+                if (y > 400) { clearInterval(moveInterval); el.remove(); }
+            }, 16);
+
+            el.onclick = () => {
+                clearInterval(moveInterval);
+                if (isBomb) {
+                    miniState.caught = Math.max(0, miniState.caught - 3);
+                    playSound(100, 0.3, 'sawtooth', 0.15);
+                    el.textContent = '💥';
+                    setTimeout(() => el.remove(), 200);
+                } else {
+                    miniState.caught++;
+                    playSound(800 + miniState.caught * 20, 0.08, 'sine', 0.1);
+                    el.textContent = '✨';
+                    setTimeout(() => el.remove(), 150);
+                }
+                document.getElementById('minigameScore').textContent = 'Caught: ' + miniState.caught;
+            };
+
+            area.appendChild(el);
+        }
+
+        function endMinigame() {
+            clearInterval(miniState.interval);
+            clearInterval(miniState.spawnInterval);
+            miniState.active = false;
+
+            const reward = miniState.caught * game.clickPower * 5;
+            game.treats += reward;
+            game.totalTreats += reward;
+            game.lifetimeTreats += reward;
+            game.minigameTreats += reward;
+
+            document.getElementById('minigameOverlay').classList.remove('active');
+            if (miniState.caught > 0) {
+                showGoldenReward(reward);
+                showMilestone('🎮 Caught ' + miniState.caught + '! +' + formatNumber(reward) + ' treats!');
+                playBossDefeatSound();
+                spawnTreatRain(miniState.caught);
+            } else {
+                showMilestone('🎮 Better luck next time!');
+            }
+            updateDisplay();
+            checkAchievements();
+            checkWinCondition();
+            renderEvents();
+            saveGame();
+        }
+
+        // ===== Prestige / Rebirth =====
+        function getPrestigeGain() {
+            return Math.floor(Math.pow(game.totalTreats / 100000, 0.5));
+        }
+
+        function doPrestige() {
+            const gain = getPrestigeGain();
+            if (gain < 1) return;
+            if (!confirm('Rebirth for +' + gain + ' prestige souls? (Currently: ' + game.prestige + ')\n\nYou keep: Prestige points, achievements, lifetime stats\nYou lose: Treats, upgrades, shop items')) return;
+
+            game.prestige += gain;
+            game.totalPrestiges++;
+            game.prestigeMulti = 1 + game.prestige * 0.1;
+
+            // Reset progress but keep meta
+            game.treats = 0;
+            game.totalTreats = 0;
+            game.totalClicks = 0;
+            game.upgrades = {};
+            game.combo = 0;
+            game.lastClickTime = 0;
+            game.goldensCaught = 0;
+            game.powerUpsUsed = 0;
+            game.clickPower = 1;
+            game.perSecond = 0;
+            game.mood = 'Sleepy';
+            game.moodMultiplier = 1;
+
+            unlockedMilestones = new Set();
+            powerUps.forEach(p => { powerUpState[p.id] = { active: false, cooldown: 0, remaining: 0 }; });
+
+            recalcPerSecond();
+            recalcClickPower();
+            updateMood();
+            updateDisplay();
+            renderShop();
+            renderPowerUps();
+            renderPrestige();
+            renderEvents();
+            checkAchievements();
+            spawnTreatRain(20);
+            showMilestone('🔮 Reborn! x' + game.prestigeMulti.toFixed(1) + ' global multiplier!');
+            playMilestoneSound();
+            saveGame();
+        }
+
+        function renderPrestige() {
+            const btn = document.getElementById('prestigeBtn');
+            const info = document.getElementById('prestigeInfo');
+            const gain = getPrestigeGain();
+
+            if (game.totalTreats >= 50000 || game.prestige > 0) {
+                btn.style.display = 'block';
+                btn.textContent = '🔮 Rebirth (+' + gain + ' souls)';
+                btn.style.opacity = gain >= 1 ? '1' : '0.5';
+                info.textContent = '🔮 Prestige: ' + game.prestige + ' souls (x' + game.prestigeMulti.toFixed(1) + ' all)';
+            } else {
+                btn.style.display = 'none';
+                info.textContent = '';
+            }
+        }
+
+        // ===== Events Row (Boss / Mini-game buttons) =====
+        function renderEvents() {
+            const row = document.getElementById('eventsRow');
+            row.innerHTML = '';
+
+            if (game.totalTreats >= 1000 || game.lifetimeTreats >= 1000) {
+                const miniBtn = document.createElement('button');
+                miniBtn.className = 'event-btn' + (canPlayMinigame() ? '' : ' disabled-btn');
+                miniBtn.textContent = '🎮 Mini-Game';
+                miniBtn.onclick = () => startMinigame();
+                row.appendChild(miniBtn);
+            }
+
+            if (game.totalTreats >= 5000 || game.lifetimeTreats >= 5000) {
+                const bossBtn = document.createElement('button');
+                const boss = getNextBoss();
+                bossBtn.className = 'event-btn' + (canFightBoss() ? '' : ' disabled-btn');
+                bossBtn.textContent = '⚔️ Boss: ' + boss.name;
+                bossBtn.onclick = () => startBossFight();
+                row.appendChild(bossBtn);
+            }
+        }
+
+        // ===== Milestones =====
+        function checkMilestones() {
+            milestones.forEach(m => {
+                if (!unlockedMilestones.has(m.at) && game.totalTreats >= m.at) {
+                    unlockedMilestones.add(m.at);
+                    showMilestone(m.msg);
+                    playMilestoneSound();
+                    screenShake();
+                    spawnTreatRain(12);
+                    recalcPerSecond();
+                    recalcClickPower();
+                }
+            });
+        }
+
+        function showMilestone(msg) {
+            const banner = document.getElementById('milestoneBanner');
+            banner.textContent = msg;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 4000);
+        }
+
+        // ===== Win Condition =====
+        const WIN_GOAL = 1000000000; // 1 billion
+
+        function checkWinCondition() {
+            if (game.hasWon) return;
+            const hasTicket = (game.upgrades['paradise_ticket'] || 0) >= 1;
+            if (hasTicket && game.totalTreats >= WIN_GOAL) {
+                triggerWin();
+            }
+        }
+
+        function triggerWin() {
+            game.hasWon = true;
+            saveGame();
+            initAudio();
+
+            // Start journey cinematic, THEN show win screen
+            playParadiseJourney(() => {
+                playWinSound();
+
+                const elapsed = Math.floor((Date.now() - game.startTime) / 1000);
+                const hrs = Math.floor(elapsed / 3600);
+                const mins = Math.floor((elapsed % 3600) / 60);
+                const secs = elapsed % 60;
+                const timeStr = (hrs > 0 ? hrs + 'h ' : '') + mins + 'm ' + secs + 's';
+
+                const stats = document.getElementById('winStats');
+                const statLines = [
+                    '🦴 Total Treats: ' + formatNumber(game.lifetimeTreats || game.totalTreats),
+                    '🐾 Total Clicks: ' + formatNumber(game.totalClicks),
+                    '🛒 Total Upgrades: ' + getTotalUpgrades(),
+                    '⚔️ Bosses Defeated: ' + game.bossesDefeated,
+                    '🔮 Rebirths: ' + game.totalPrestiges,
+                    '🔥 Max Combo: ' + game.maxCombo,
+                    '✨ Golden Bones: ' + game.goldensCaught,
+                    '🏆 Achievements: ' + unlockedAchievements.size + '/' + achievements.length,
+                    '⏱️ Time: ' + timeStr
+                ];
+                stats.innerHTML = '<h3>📊 Final Stats</h3>' + statLines.map((line, i) =>
+                    '<p style="animation-delay:' + (2.4 + i * 0.15) + 's">' + line + '</p>'
+                ).join('');
+
+                document.getElementById('winOverlay').classList.add('active');
+                spawnTreatRain(30);
+                startWinAnimations();
+            });
+
+            checkAchievements();
+        }
+
+        // ===== Treat World Journey Cinematic =====
+        let journeyTrailInterval = null;
+
+        function playParadiseJourney(onComplete) {
+            const overlay = document.getElementById('journeyOverlay');
+            const dog = document.getElementById('journeyDog');
+            overlay.classList.add('active');
+
+            // Build scenes
+            buildCityScene();
+            buildCloudScene();
+
+            const scenes = [
+                document.getElementById('journeyScene1'),
+                document.getElementById('journeyScene2'),
+                document.getElementById('journeyScene3'),
+                document.getElementById('journeyScene4')
+            ];
+            const captions = [
+                document.getElementById('journeyCaption1'),
+                document.getElementById('journeyCaption2'),
+                document.getElementById('journeyCaption3'),
+                document.getElementById('journeyCaption4')
+            ];
+
+            // Timeline
+            let t = 0;
+
+            // Scene 1: Home - Linda sees a treat glow and walks toward it
+            scenes[0].classList.add('visible');
+            dog.className = 'journey-dog walking';
+            dog.style.top = 'auto';
+            dog.style.bottom = '42%';
+            dog.style.left = '-60px';
+            setTimeout(() => { dog.style.left = '50%'; }, 100);
+            setTimeout(() => { captions[0].classList.add('visible'); }, 800);
+            // Dreamy sound
+            playSound(330, 2, 'sine', 0.04);
+            setTimeout(() => playSound(440, 2, 'sine', 0.04), 500);
+            t += 3500;
+
+            // Scene 2: Treat trail path - dog walks along the path
+            setTimeout(() => {
+                scenes[0].classList.remove('visible');
+                captions[0].classList.remove('visible');
+                scenes[1].classList.add('visible');
+                dog.className = 'journey-dog walking';
+                dog.style.top = 'auto';
+                dog.style.bottom = '33%';
+                dog.style.left = '10%';
+                // Start sparkle trail
+                startJourneyTrail(dog);
+                setTimeout(() => {
+                    dog.style.left = '80%';
+                }, 200);
+                setTimeout(() => { captions[1].classList.add('visible'); }, 600);
+                // Whimsical sound
+                playSound(392, 1.5, 'sine', 0.06);
+                setTimeout(() => playSound(523, 1, 'sine', 0.06), 300);
+            }, t);
+            t += 3500;
+
+            // Scene 3: Treat World gates - dog walks toward the gate
+            setTimeout(() => {
+                scenes[1].classList.remove('visible');
+                captions[1].classList.remove('visible');
+                scenes[2].classList.add('visible');
+                dog.className = 'journey-dog walking';
+                dog.style.top = 'auto';
+                dog.style.bottom = '15%';
+                dog.style.left = '-10%';
+                setTimeout(() => {
+                    dog.style.left = '50%';
+                }, 300);
+                setTimeout(() => { captions[2].classList.add('visible'); }, 600);
+                // Gate opening sound
+                playSound(523, 1.5, 'sine', 0.1);
+                setTimeout(() => playSound(659, 1, 'triangle', 0.1), 400);
+                setTimeout(() => playSound(784, 1.5, 'sine', 0.1), 800);
+            }, t);
+            t += 3500;
+
+            // Scene 4: Treat World - dog walks into the world
+            setTimeout(() => {
+                scenes[2].classList.remove('visible');
+                captions[2].classList.remove('visible');
+                buildTreatWorldScene();
+                scenes[3].classList.add('visible');
+                dog.className = 'journey-dog walking';
+                dog.style.top = 'auto';
+                dog.style.bottom = '22%';
+                dog.style.left = '-10%';
+                setTimeout(() => {
+                    dog.style.left = '50%';
+                }, 300);
+                setTimeout(() => { captions[3].classList.add('visible'); }, 1000);
+                // Treat World jingle
+                [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playSound(f, 0.5, 'triangle', 0.08), i * 200));
+            }, t);
+            t += 4000;
+
+            // Fade out journey and trigger win
+            setTimeout(() => {
+                stopJourneyTrail();
+                overlay.style.transition = 'opacity 1.5s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    overlay.style.opacity = '';
+                    overlay.style.transition = '';
+                    scenes.forEach(s => s.classList.remove('visible'));
+                    captions.forEach(c => c.classList.remove('visible'));
+                    dog.className = 'journey-dog';
+                    dog.style = '';
+                    onComplete();
+                }, 1500);
+            }, t);
+        }
+
+        function buildCityScene() {
+            // Scene 1 is now static HTML (home with treat jars), just build stars
+            const starsEl = document.getElementById('journeyStars');
+            starsEl.innerHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 2 + 's';
+                star.style.width = (2 + Math.random() * 3) + 'px';
+                star.style.height = star.style.width;
+                starsEl.appendChild(star);
+            }
+        }
+
+        function buildCloudScene() {
+            const container = document.getElementById('journeyClouds');
+            container.innerHTML = '';
+            // Add a few clouds in the sky
+            const cloudData = [
+                { w: 150, h: 40, x: '10%', y: '8%', delay: '0s' },
+                { w: 180, h: 50, x: '55%', y: '5%', delay: '1s' },
+                { w: 120, h: 35, x: '80%', y: '15%', delay: '0.5s' },
+            ];
+            cloudData.forEach(c => {
+                const el = document.createElement('div');
+                el.className = 'cloud';
+                el.style.width = c.w + 'px';
+                el.style.height = c.h + 'px';
+                el.style.left = c.x;
+                el.style.top = c.y;
+                el.style.animationDelay = c.delay;
+                container.appendChild(el);
+            });
+            // Add treats scattered on the path
+            const treats = ['🦴', '🍖', '🥩', '🍪', '⭐', '🐾'];
+            for (let i = 0; i < 10; i++) {
+                const el = document.createElement('div');
+                el.className = 'path-treat';
+                el.textContent = treats[Math.floor(Math.random() * treats.length)];
+                el.style.left = (5 + i * 9) + '%';
+                el.style.bottom = (8 + Math.random() * 20) + '%';
+                el.style.animationDelay = (Math.random() * 2) + 's';
+                container.appendChild(el);
+            }
+        }
+
+        function buildTreatWorldScene() {
+            const container = document.getElementById('floatingTreats');
+            container.innerHTML = '';
+            const treats = ['🦴', '🍖', '🥩', '🍪', '🧁', '🎾', '🐾', '⭐'];
+            for (let i = 0; i < 15; i++) {
+                const el = document.createElement('div');
+                el.className = 'floating-treat';
+                el.textContent = treats[Math.floor(Math.random() * treats.length)];
+                el.style.left = (5 + Math.random() * 90) + '%';
+                el.style.top = (5 + Math.random() * 70) + '%';
+                el.style.animationDelay = (Math.random() * 3) + 's';
+                el.style.animationDuration = (3 + Math.random() * 3) + 's';
+                el.style.fontSize = (1.2 + Math.random() * 1.5) + 'rem';
+                container.appendChild(el);
+            }
+        }
+
+        function startJourneyTrail(dog) {
+            journeyTrailInterval = setInterval(() => {
+                const rect = dog.getBoundingClientRect();
+                const trail = document.createElement('div');
+                trail.className = 'journey-trail';
+                const colors = ['#FFD700', '#FF69B4', '#00BFFF', '#FFF'];
+                trail.style.background = colors[Math.floor(Math.random() * colors.length)];
+                trail.style.width = (4 + Math.random() * 8) + 'px';
+                trail.style.height = trail.style.width;
+                trail.style.left = (rect.left + rect.width / 2 + (Math.random() - 0.5) * 30) + 'px';
+                trail.style.top = (rect.top + rect.height / 2 + (Math.random() - 0.5) * 30) + 'px';
+                document.getElementById('journeyOverlay').appendChild(trail);
+                setTimeout(() => trail.remove(), 1000);
+            }, 60);
+        }
+
+        function stopJourneyTrail() {
+            if (journeyTrailInterval) { clearInterval(journeyTrailInterval); journeyTrailInterval = null; }
+        }
+
+        // ===== Win Screen Animations =====
+        let fireworksRAF = null;
+        let confettiInterval = null;
+        let sparkleInterval = null;
+
+        function startWinAnimations() {
+            startFireworks();
+            startConfetti();
+            startSparkles();
+        }
+
+        function stopWinAnimations() {
+            if (fireworksRAF) { cancelAnimationFrame(fireworksRAF); fireworksRAF = null; }
+            if (confettiInterval) { clearInterval(confettiInterval); confettiInterval = null; }
+            if (sparkleInterval) { clearInterval(sparkleInterval); sparkleInterval = null; }
+            stopJourneyTrail();
+            const canvas = document.getElementById('fireworksCanvas');
+            if (canvas) { const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            const cc = document.getElementById('confettiContainer');
+            if (cc) cc.innerHTML = '';
+            document.querySelectorAll('.win-sparkle').forEach(s => s.remove());
+            // Clean up journey overlay
+            const jo = document.getElementById('journeyOverlay');
+            if (jo) {
+                jo.classList.remove('active');
+                jo.style.opacity = '';
+                jo.style.transition = '';
+                jo.querySelectorAll('.journey-scene').forEach(s => s.classList.remove('visible'));
+                jo.querySelectorAll('.journey-caption').forEach(c => c.classList.remove('visible'));
+                jo.querySelectorAll('.journey-trail').forEach(t => t.remove());
+            }
+        }
+
+        // -- Fireworks --
+        function startFireworks() {
+            const canvas = document.getElementById('fireworksCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const fireworks = [];
+            const particles = [];
+            const colors = ['#FFD700','#FF6347','#FF69B4','#00BFFF','#7CFC00','#FF8C00','#9370DB','#00FFCC'];
+
+            function Firework() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height;
+                this.targetY = canvas.height * (0.15 + Math.random() * 0.4);
+                this.speed = 4 + Math.random() * 3;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.trail = [];
+                this.alive = true;
+            }
+
+            function Particle(x, y, color) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 5;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.color = color;
+                this.alpha = 1;
+                this.decay = 0.012 + Math.random() * 0.02;
+                this.size = 1.5 + Math.random() * 2;
+            }
+
+            function spawnFirework() {
+                fireworks.push(new Firework());
+            }
+
+            function explode(fw) {
+                const count = 60 + Math.floor(Math.random() * 40);
+                for (let i = 0; i < count; i++) particles.push(new Particle(fw.x, fw.y, fw.color));
+                playSound(300 + Math.random() * 400, 0.3, 'sine', 0.04);
+            }
+
+            let lastSpawn = 0;
+            function animate(time) {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'lighter';
+
+                if (time - lastSpawn > 400 + Math.random() * 600) { spawnFirework(); lastSpawn = time; }
+
+                for (let i = fireworks.length - 1; i >= 0; i--) {
+                    const fw = fireworks[i];
+                    fw.trail.push({ x: fw.x, y: fw.y });
+                    if (fw.trail.length > 8) fw.trail.shift();
+                    fw.y -= fw.speed;
+                    fw.x += (Math.random() - 0.5) * 0.5;
+
+                    fw.trail.forEach((t, ti) => {
+                        ctx.beginPath();
+                        ctx.arc(t.x, t.y, 1.5, 0, Math.PI * 2);
+                        ctx.fillStyle = fw.color;
+                        ctx.globalAlpha = ti / fw.trail.length * 0.6;
+                        ctx.fill();
+                    });
+                    ctx.globalAlpha = 1;
+
+                    ctx.beginPath();
+                    ctx.arc(fw.x, fw.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fff';
+                    ctx.fill();
+
+                    if (fw.y <= fw.targetY) { explode(fw); fireworks.splice(i, 1); }
+                }
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.04;
+                    p.vx *= 0.99;
+                    p.alpha -= p.decay;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.fill();
+
+                    if (p.alpha <= 0) particles.splice(i, 1);
+                }
+                ctx.globalAlpha = 1;
+
+                fireworksRAF = requestAnimationFrame(animate);
+            }
+            fireworksRAF = requestAnimationFrame(animate);
+        }
+
+        // -- Confetti --
+        function startConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#FFD700','#FF6347','#FF69B4','#00BFFF','#7CFC00','#FF8C00','#9370DB','#FFF','#00FFCC'];
+
+            function spawnConfetti() {
+                const el = document.createElement('div');
+                el.className = 'confetti-piece';
+                el.style.left = Math.random() * 100 + '%';
+                el.style.background = colors[Math.floor(Math.random() * colors.length)];
+                el.style.animationDuration = (2.5 + Math.random() * 3) + 's';
+                el.style.width = (6 + Math.random() * 8) + 'px';
+                el.style.height = (8 + Math.random() * 10) + 'px';
+                el.style.opacity = 0.8 + Math.random() * 0.2;
+                container.appendChild(el);
+                setTimeout(() => el.remove(), 6000);
+            }
+
+            // initial burst
+            for (let i = 0; i < 40; i++) setTimeout(() => spawnConfetti(), i * 50);
+            // continuous
+            confettiInterval = setInterval(spawnConfetti, 200);
+        }
+
+        // -- Sparkles floating around --
+        function startSparkles() {
+            const overlay = document.getElementById('winOverlay');
+            const colors = ['#FFD700', '#FFF', '#FF69B4', '#00BFFF', '#FF8C00'];
+
+            function spawnSparkle() {
+                const s = document.createElement('div');
+                s.className = 'win-sparkle';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                s.style.background = colors[Math.floor(Math.random() * colors.length)];
+                s.style.animationDuration = (2 + Math.random() * 3) + 's';
+                s.style.animationDelay = Math.random() * 2 + 's';
+                s.style.width = (3 + Math.random() * 6) + 'px';
+                s.style.height = s.style.width;
+                s.style.boxShadow = '0 0 ' + (8 + Math.random() * 12) + 'px ' + s.style.background;
+                overlay.appendChild(s);
+                setTimeout(() => s.remove(), 6000);
+            }
+
+            for (let i = 0; i < 20; i++) setTimeout(() => spawnSparkle(), i * 100);
+            sparkleInterval = setInterval(spawnSparkle, 300);
+        }
+
+        function closeWinScreen() {
+            stopWinAnimations();
+            document.getElementById('winOverlay').classList.remove('active');
+        }
+
+        function newGamePlus() {
+            if (!confirm('Start New Game+? You keep prestige & achievements but reset everything else.')) return;
+            stopWinAnimations();
+            document.getElementById('winOverlay').classList.remove('active');
+
+            const keepPrestige = game.prestige + 10; // bonus prestige for winning
+            const keepPrestiges = game.totalPrestiges;
+            const keepBosses = game.bossesDefeated;
+
+            game = {
+                treats: 0, totalTreats: 0, totalClicks: 0, clickPower: 1, perSecond: 0,
+                startTime: Date.now(), upgrades: {}, combo: 0, maxCombo: 0, lastClickTime: 0,
+                moodMultiplier: 1, mood: 'Sleepy', goldensCaught: 0, powerUpsUsed: 0,
+                prestige: keepPrestige, prestigeMulti: 1 + keepPrestige * 0.1,
+                totalPrestiges: keepPrestiges + 1, bossesDefeated: keepBosses,
+                minigamesPlayed: 0, minigameTreats: 0, hasWon: false,
+                lifetimeTreats: 0
+            };
+
+            unlockedMilestones = new Set();
+            powerUps.forEach(p => { powerUpState[p.id] = { active: false, cooldown: 0, remaining: 0 }; });
+
+            recalcPerSecond();
+            recalcClickPower();
+            updateMood();
+            updateDisplay();
+            renderShop();
+            renderPowerUps();
+            renderPrestige();
+            renderEvents();
+            updateProgressBar();
+            showMilestone('🔮 New Game+! x' + game.prestigeMulti.toFixed(1) + ' power!');
+            playMilestoneSound();
+            saveGame();
+        }
+
+        // ===== Progress Bar =====
+        function updateProgressBar() {
+            const container = document.getElementById('progressContainer');
+            const hasTicket = (game.upgrades['paradise_ticket'] || 0) >= 1;
+
+            if (game.totalTreats >= 10000000 || hasTicket) {
+                container.style.display = 'block';
+                const pct = Math.min(100, (game.totalTreats / WIN_GOAL) * 100);
+                document.getElementById('progressFill').style.width = pct + '%';
+                let label = '� Treat World: ' + pct.toFixed(1) + '%';
+                if (!hasTicket && pct > 0) label += ' (Need Treat World Ticket!)';
+                if (game.hasWon) label = '🍖 Treat World: COMPLETE! 🎉';
+                document.getElementById('progressLabel').textContent = label;
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        // ===== Shop Tab System =====
+        function switchShopTab(tab) {
+            currentShopTab = tab;
+            document.querySelectorAll('.shop-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === tab));
+            renderShop();
+        }
+
+        // ===== UI Updates =====
+        function updateDisplay() {
+            document.getElementById('scoreDisplay').textContent = formatNumber(game.treats) + ' treats';
+            document.getElementById('perSecDisplay').textContent = 'per second: ' + formatNumber(game.perSecond);
+
+            const comboMult = getComboMultiplier();
+            let clickText = '🦴 +' + formatNumber(game.clickPower) + ' per click';
+            if (comboMult > 1) clickText += ' (x' + comboMult.toFixed(1) + ' combo!)';
+            document.getElementById('clickPower').textContent = clickText;
+
+            document.getElementById('statClicks').textContent = formatNumber(game.totalClicks);
+            document.getElementById('statTotal').textContent = formatNumber(game.totalTreats);
+            document.getElementById('statPerClick').textContent = formatNumber(game.clickPower);
+            document.getElementById('statPerSec').textContent = formatNumber(game.perSecond);
+            document.getElementById('statUpgrades').textContent = getTotalUpgrades();
+
+            const elapsed = Math.floor((Date.now() - game.startTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            document.getElementById('statTime').textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function renderShop() {
+            const container = document.getElementById('shopItems');
+            container.innerHTML = '';
+            const filtered = shopData.filter(item => item.category === currentShopTab);
+
+            filtered.forEach(item => {
+                // Hide endgame items until close
+                if (item.isEndgame && game.totalTreats < 100000000 && game.lifetimeTreats < 100000000) return;
+
+                const cost = getCost(item);
+                const owned = game.upgrades[item.id] || 0;
+                const canAfford = game.treats >= cost;
+                const maxed = item.maxOwn && owned >= item.maxOwn;
+
+                const div = document.createElement('div');
+                div.className = 'shop-item' + (maxed ? ' cannot-afford' : (canAfford ? '' : ' cannot-afford'));
+                div.onclick = () => { if (!maxed) buyItem(item); };
+                div.id = 'shop-' + item.id;
+
+                let prodText = '';
+                if (item.perSec > 0) prodText = '+' + formatNumber(item.perSec) + '/sec each';
+                else if (item.perClick > 0) prodText = '+' + formatNumber(item.perClick) + '/click each';
+                else if (item.clickMultiplier) prodText = 'x' + item.clickMultiplier + ' click power';
+                else if (item.autoMultiplier) prodText = 'x' + item.autoMultiplier + ' auto production';
+                else if (item.globalMultiplier) prodText = 'x' + item.globalMultiplier + ' everything';
+                else if (item.goldenBoost) prodText = '2x golden bone frequency';
+                else if (item.cooldownReduce) prodText = 'Half power-up cooldowns';
+                else if (item.isEndgame) prodText = '🏝️ THE FINAL UPGRADE';
+
+                div.innerHTML = '<div class="shop-icon">' + item.icon + '</div>'
+                    + '<div class="shop-info">'
+                    + '<div class="shop-name">' + item.name + '</div>'
+                    + '<div class="shop-desc">' + item.desc + '</div>'
+                    + '<div class="shop-production">' + prodText + '</div>'
+                    + '<div class="shop-cost">' + (maxed ? 'MAXED' : '🦴 ' + formatNumber(cost)) + '</div>'
+                    + '</div>'
+                    + '<div class="shop-owned">' + (maxed ? '✅ MAX' : owned) + '</div>';
+
+                container.appendChild(div);
+            });
+        }
+
+        // ===== Game Actions =====
+        function handleClick(event) {
+            initAudio();
+            updateCombo();
+            const effectiveClick = getEffectiveClick();
+            game.treats += effectiveClick;
+            game.totalTreats += effectiveClick;
+            game.lifetimeTreats += effectiveClick;
+            game.totalClicks++;
+
+            const btn = document.getElementById('dogBtn');
+            btn.classList.remove('clicked');
+            void btn.offsetWidth;
+            btn.classList.add('clicked');
+
+            spawnParticle(event, effectiveClick);
+            playClickSound();
+            updateDisplay();
+            updateShopAffordability();
+            checkAchievements();
+            checkMilestones();
+            checkWinCondition();
+            saveGame();
+        }
+
+        function spawnParticle(event, amount) {
+            const container = document.getElementById('dogContainer');
+            const rect = container.getBoundingClientRect();
+            const particle = document.createElement('div');
+            particle.className = 'click-particle';
+            particle.textContent = '+' + formatNumber(amount);
+            particle.style.left = (event.clientX - rect.left + (Math.random() - 0.5) * 30) + 'px';
+            particle.style.top = (event.clientY - rect.top) + 'px';
+            if (game.combo >= 10) particle.style.fontSize = '2rem';
+            else if (game.combo >= 5) particle.style.fontSize = '1.6rem';
+            container.appendChild(particle);
+            setTimeout(() => particle.remove(), 1000);
+        }
+
+        function buyItem(item) {
+            const cost = getCost(item);
+            if (game.treats < cost) return;
+            if (item.maxOwn && (game.upgrades[item.id] || 0) >= item.maxOwn) return;
+            game.treats -= cost;
+            game.upgrades[item.id] = (game.upgrades[item.id] || 0) + 1;
+
+            recalcPerSecond();
+            recalcClickPower();
+            updateMood();
+
+            const el = document.getElementById('shop-' + item.id);
+            if (el) { el.classList.add('purchase-flash'); setTimeout(() => el.classList.remove('purchase-flash'), 400); }
+
+            playBuySound();
+            updateDisplay();
+            renderShop();
+            renderPowerUps();
+            renderPrestige();
+            renderEvents();
+            updateProgressBar();
+            checkAchievements();
+            checkMilestones();
+            checkWinCondition();
+            saveGame();
+        }
+
+        // ===== Achievements =====
+        function checkAchievements() {
+            achievements.forEach(a => {
+                if (!unlockedAchievements.has(a.id) && a.check()) {
+                    unlockedAchievements.add(a.id);
+                    showAchievement(a.name, a.desc);
+                }
+            });
+        }
+
+        function showAchievement(title, text) {
+            const popup = document.getElementById('achievementPopup');
+            document.getElementById('achieveTitle').textContent = title;
+            document.getElementById('achieveText').textContent = text;
+            popup.classList.add('show');
+            setTimeout(() => popup.classList.remove('show'), 3500);
+        }
+
+        // ===== Shop Affordability =====
+        function updateShopAffordability() {
+            shopData.forEach(item => {
+                const el = document.getElementById('shop-' + item.id);
+                if (el) {
+                    const maxed = item.maxOwn && (game.upgrades[item.id] || 0) >= item.maxOwn;
+                    if (!maxed && game.treats >= getCost(item)) el.classList.remove('cannot-afford');
+                    else el.classList.add('cannot-afford');
+                }
+            });
+        }
+
+        // ===== Main Game Loop =====
+        let lastTick = Date.now();
+        let shopUpdateTimer = 0;
+        let powerUpRenderTimer = 0;
+        let progressTimer = 0;
+
+        function gameLoop() {
+            const now = Date.now();
+            const delta = (now - lastTick) / 1000;
+            lastTick = now;
+
+            if (game.perSecond > 0) {
+                const earned = game.perSecond * delta;
+                game.treats += earned;
+                game.totalTreats += earned;
+                game.lifetimeTreats += earned;
+            }
+
+            autoClickTick(delta);
+            tickPowerUps(delta);
+            updateDisplay();
+
+            shopUpdateTimer += delta;
+            if (shopUpdateTimer >= 0.5) {
+                shopUpdateTimer = 0;
+                updateShopAffordability();
+                checkAchievements();
+                checkMilestones();
+                updateMood();
+                checkWinCondition();
+            }
+
+            powerUpRenderTimer += delta;
+            if (powerUpRenderTimer >= 0.3) {
+                powerUpRenderTimer = 0;
+                renderPowerUps();
+                renderPrestige();
+            }
+
+            progressTimer += delta;
+            if (progressTimer >= 1) {
+                progressTimer = 0;
+                updateProgressBar();
+                renderEvents();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ===== Auth System =====
+        let currentUser = null;
+        let isSignUpMode = false;
+
+        // Pre-built admin account
+        const ADMIN_USERNAME = 'darder777';
+        const ADMIN_PASSWORD = 'pushenka2985';
+
+        function initAdminAccount() {
+            const accounts = JSON.parse(localStorage.getItem('dogClickerAccounts') || '{}');
+            if (!accounts[ADMIN_USERNAME]) {
+                accounts[ADMIN_USERNAME] = { password: ADMIN_PASSWORD, isAdmin: true, created: Date.now() };
+                localStorage.setItem('dogClickerAccounts', JSON.stringify(accounts));
+            }
+        }
+
+        function getAccounts() {
+            return JSON.parse(localStorage.getItem('dogClickerAccounts') || '{}');
+        }
+
+        function saveAccounts(accounts) {
+            localStorage.setItem('dogClickerAccounts', JSON.stringify(accounts));
+        }
+
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            document.getElementById('authError').textContent = '';
+            if (isSignUpMode) {
+                document.getElementById('loginSubtitle').textContent = 'Create a new account';
+                document.getElementById('authPrimaryBtn').textContent = 'Create Account';
+                document.getElementById('authSecondaryBtn').textContent = 'Back to Sign In';
+                document.getElementById('authToggle').innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
+            } else {
+                document.getElementById('loginSubtitle').textContent = 'Sign in to save your progress';
+                document.getElementById('authPrimaryBtn').textContent = 'Sign In';
+                document.getElementById('authSecondaryBtn').textContent = 'Create Account';
+                document.getElementById('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>';
+            }
+        }
+
+        function authAction() {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const errorEl = document.getElementById('authError');
+
+            if (!username || !password) { errorEl.textContent = 'Please fill in all fields'; return; }
+            if (username.length < 3) { errorEl.textContent = 'Username must be 3+ characters'; return; }
+            if (password.length < 4) { errorEl.textContent = 'Password must be 4+ characters'; return; }
+
+            const accounts = getAccounts();
+
+            if (isSignUpMode) {
+                // SIGN UP
+                if (accounts[username]) { errorEl.textContent = 'Username already taken!'; return; }
+                accounts[username] = { password: password, isAdmin: false, created: Date.now() };
+                saveAccounts(accounts);
+                loginAs(username, accounts[username]);
+            } else {
+                // SIGN IN
+                const account = accounts[username];
+                if (!account) { errorEl.textContent = 'Account not found'; return; }
+                if (account.password !== password) { errorEl.textContent = 'Wrong password!'; return; }
+                loginAs(username, account);
+            }
+        }
+
+        function loginAs(username, account) {
+            currentUser = { username: username, isAdmin: account.isAdmin || false };
+            localStorage.setItem('dogClickerCurrentUser', username);
+
+            // Hide login, show game
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('userBar').classList.remove('hidden');
+            document.getElementById('currentUsername').textContent = username;
+
+            if (account.isAdmin) {
+                document.getElementById('adminBadge').classList.remove('hidden');
+                document.getElementById('adminBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('adminBadge').classList.add('hidden');
+                document.getElementById('adminBtn').classList.add('hidden');
+            }
+
+            // Load this user's save
+            loadGame();
+            updateMood();
+            updateDisplay();
+            renderShop();
+            renderPowerUps();
+            renderPrestige();
+            renderEvents();
+            updateProgressBar();
+        }
+
+        function logoutUser() {
+            if (!confirm('Log out? Your progress is saved!')) return;
+            saveGame();
+            currentUser = null;
+            localStorage.removeItem('dogClickerCurrentUser');
+
+            // Reset game state in memory
+            game = {
+                treats: 0, totalTreats: 0, totalClicks: 0, clickPower: 1, perSecond: 0,
+                startTime: Date.now(), upgrades: {}, combo: 0, maxCombo: 0, lastClickTime: 0,
+                moodMultiplier: 1, mood: 'Sleepy', goldensCaught: 0, powerUpsUsed: 0,
+                prestige: 0, prestigeMulti: 1, totalPrestiges: 0,
+                bossesDefeated: 0, minigamesPlayed: 0, minigameTreats: 0,
+                hasWon: false, lifetimeTreats: 0
+            };
+            unlockedAchievements = new Set();
+            unlockedMilestones = new Set();
+
+            // Show login screen
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('userBar').classList.add('hidden');
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authPassword').value = '';
+            document.getElementById('authError').textContent = '';
+        }
+
+        function getSaveKey() {
+            if (currentUser) return 'dogClickerSave_' + currentUser.username;
+            return 'dogClickerSave';
+        }
+
+        // ===== Admin Panel =====
+        function openAdminPanel() {
+            if (!currentUser || !currentUser.isAdmin) return;
+            renderAdminPanel();
+            document.getElementById('adminOverlay').classList.add('active');
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('adminOverlay').classList.remove('active');
+        }
+
+        function renderAdminPanel() {
+            const accounts = getAccounts();
+            const container = document.getElementById('adminUserList');
+            const usernames = Object.keys(accounts);
+
+            container.innerHTML = '<p style="color:rgba(255,255,255,0.5);margin-bottom:12px;">' + usernames.length + ' registered users</p>';
+
+            usernames.forEach(uname => {
+                const acc = accounts[uname];
+                const saveRaw = localStorage.getItem('dogClickerSave_' + uname);
+                let statsText = 'No save data';
+                if (saveRaw) {
+                    try {
+                        const s = JSON.parse(saveRaw);
+                        statsText = 'Treats: ' + formatNumber(s.totalTreats || 0) + ' | Clicks: ' + formatNumber(s.totalClicks || 0);
+                    } catch(e) {}
+                }
+
+                const div = document.createElement('div');
+                div.className = 'admin-user';
+                div.innerHTML = '<div><div class="au-name">' + uname + (acc.isAdmin ? ' <span style="color:#ff4444;font-size:0.7rem">ADMIN</span>' : '') + '</div>'
+                    + '<div class="au-stats">' + statsText + '</div></div>'
+                    + (uname !== ADMIN_USERNAME ? '<button class="danger" onclick="adminDeleteUser(\'' + uname + '\')">Delete</button>' : '<span style="color:rgba(255,255,255,0.3);font-size:0.75rem">Protected</span>');
+                container.appendChild(div);
+            });
+        }
+
+        function adminDeleteUser(username) {
+            if (!currentUser || !currentUser.isAdmin) return;
+            if (!confirm('Delete user "' + username + '" and their save data?')) return;
+            const accounts = getAccounts();
+            delete accounts[username];
+            saveAccounts(accounts);
+            localStorage.removeItem('dogClickerSave_' + username);
+            renderAdminPanel();
+        }
+
+        // ===== Admin Tools =====
+        function adminEndGame() {
+            if (!currentUser || !currentUser.isAdmin) return;
+            closeAdminPanel();
+            // Give the ticket if not owned
+            if (!game.upgrades['paradise_ticket']) game.upgrades['paradise_ticket'] = 1;
+            game.totalTreats = Math.max(game.totalTreats, 1000000000);
+            game.lifetimeTreats = Math.max(game.lifetimeTreats, 1000000000);
+            game.treats = Math.max(game.treats, 1000000000);
+            game.hasWon = false; // Reset so animation replays
+            recalcPerSecond();
+            recalcClickPower();
+            updateDisplay();
+            // Stop any existing win animations first
+            stopWinAnimations();
+            document.getElementById('winOverlay').classList.remove('active');
+            triggerWin();
+        }
+
+        function adminAddTreats() {
+            if (!currentUser || !currentUser.isAdmin) return;
+            const input = document.getElementById('adminTreatsInput');
+            const amount = parseFloat(input.value);
+            if (isNaN(amount) || amount <= 0) return;
+            game.treats += amount;
+            game.totalTreats += amount;
+            game.lifetimeTreats += amount;
+            input.value = '';
+            recalcPerSecond();
+            recalcClickPower();
+            updateDisplay();
+            renderShop();
+            checkMilestones();
+            checkWinCondition();
+            updateProgressBar();
+            saveGame();
+            showMilestone('🛠️ Admin: +' + formatNumber(amount) + ' treats!');
+        }
+
+        function adminSetTreats() {
+            if (!currentUser || !currentUser.isAdmin) return;
+            const input = document.getElementById('adminTreatsInput');
+            const amount = parseFloat(input.value);
+            if (isNaN(amount) || amount < 0) return;
+            const diff = amount - game.treats;
+            game.treats = amount;
+            if (diff > 0) {
+                game.totalTreats += diff;
+                game.lifetimeTreats += diff;
+            }
+            input.value = '';
+            recalcPerSecond();
+            recalcClickPower();
+            updateDisplay();
+            renderShop();
+            checkMilestones();
+            checkWinCondition();
+            updateProgressBar();
+            saveGame();
+            showMilestone('🛠️ Admin: Treats set to ' + formatNumber(amount));
+        }
+
+        function adminSetPerSec() {
+            if (!currentUser || !currentUser.isAdmin) return;
+            const input = document.getElementById('adminPerSecInput');
+            const amount = parseFloat(input.value);
+            if (isNaN(amount) || amount < 0) return;
+            game.adminPerSecBonus = amount;
+            input.value = '';
+            recalcPerSecond();
+            updateDisplay();
+            updateMood();
+            saveGame();
+            showMilestone('🛠️ Admin: +' + formatNumber(amount) + ' treats/sec added!');
+        }
+
+        // ===== Save / Load =====
+        function saveGame() {
+            const data = {
+                treats: game.treats, totalTreats: game.totalTreats, totalClicks: game.totalClicks,
+                upgrades: game.upgrades, startTime: game.startTime,
+                achievements: Array.from(unlockedAchievements),
+                milestones: Array.from(unlockedMilestones),
+                goldensCaught: game.goldensCaught, powerUpsUsed: game.powerUpsUsed,
+                maxCombo: game.maxCombo, prestige: game.prestige,
+                prestigeMulti: game.prestigeMulti, totalPrestiges: game.totalPrestiges,
+                bossesDefeated: game.bossesDefeated, minigamesPlayed: game.minigamesPlayed,
+                minigameTreats: game.minigameTreats, hasWon: game.hasWon,
+                lifetimeTreats: game.lifetimeTreats,
+                adminPerSecBonus: game.adminPerSecBonus || 0
+            };
+            localStorage.setItem(getSaveKey(), JSON.stringify(data));
+        }
+
+        function loadGame() {
+            const raw = localStorage.getItem(getSaveKey());
+            if (!raw) return;
+            try {
+                const d = JSON.parse(raw);
+                game.treats = d.treats || 0;
+                game.totalTreats = d.totalTreats || 0;
+                game.totalClicks = d.totalClicks || 0;
+                game.upgrades = d.upgrades || {};
+                game.startTime = d.startTime || Date.now();
+                game.goldensCaught = d.goldensCaught || 0;
+                game.powerUpsUsed = d.powerUpsUsed || 0;
+                game.maxCombo = d.maxCombo || 0;
+                game.prestige = d.prestige || 0;
+                game.prestigeMulti = d.prestigeMulti || 1;
+                game.totalPrestiges = d.totalPrestiges || 0;
+                game.bossesDefeated = d.bossesDefeated || 0;
+                game.minigamesPlayed = d.minigamesPlayed || 0;
+                game.minigameTreats = d.minigameTreats || 0;
+                game.hasWon = d.hasWon || false;
+                game.lifetimeTreats = d.lifetimeTreats || d.totalTreats || 0;
+                game.adminPerSecBonus = d.adminPerSecBonus || 0;
+                unlockedAchievements = new Set(d.achievements || []);
+                unlockedMilestones = new Set((d.milestones || []).map(Number));
+                recalcPerSecond();
+                recalcClickPower();
+            } catch (e) { console.warn('Failed to load:', e); }
+        }
+
+        function resetGame() {
+            if (!confirm('Are you sure? ALL progress will be lost, including prestige!')) return;
+            localStorage.removeItem(getSaveKey());
+            game = {
+                treats: 0, totalTreats: 0, totalClicks: 0, clickPower: 1, perSecond: 0,
+                startTime: Date.now(), upgrades: {}, combo: 0, maxCombo: 0, lastClickTime: 0,
+                moodMultiplier: 1, mood: 'Sleepy', goldensCaught: 0, powerUpsUsed: 0,
+                prestige: 0, prestigeMulti: 1, totalPrestiges: 0,
+                bossesDefeated: 0, minigamesPlayed: 0, minigameTreats: 0,
+                hasWon: false, lifetimeTreats: 0
+            };
+            unlockedAchievements = new Set();
+            unlockedMilestones = new Set();
+            powerUps.forEach(p => { powerUpState[p.id] = { active: false, cooldown: 0, remaining: 0 }; });
+            updateMood();
+            updateDisplay();
+            renderShop();
+            renderPowerUps();
+            renderPrestige();
+            renderEvents();
+            updateProgressBar();
+        }
+
+        // ===== Background Bones =====
+        function createBackgroundBones() {
+            const container = document.getElementById('bgBones');
+            const bones = ['🦴', '🐾', '🎾', '🐕', '❤️', '⭐'];
+            for (let i = 0; i < 15; i++) {
+                const bone = document.createElement('div');
+                bone.className = 'bg-bone';
+                bone.textContent = bones[Math.floor(Math.random() * bones.length)];
+                bone.style.left = Math.random() * 100 + 'vw';
+                bone.style.animationDuration = (10 + Math.random() * 20) + 's';
+                bone.style.animationDelay = (Math.random() * 15) + 's';
+                bone.style.fontSize = (20 + Math.random() * 30) + 'px';
+                container.appendChild(bone);
+            }
+        }
+
+        // ===== Auto-save =====
+        setInterval(() => { if (currentUser) saveGame(); }, 30000);
+
+        // ===== Init =====
+        initAdminAccount();
+        createBackgroundBones();
+        scheduleGoldenBone();
+        requestAnimationFrame(gameLoop);
+
+        // Allow Enter key to submit login
+        document.getElementById('authPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') authAction(); });
+        document.getElementById('authUsername').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('authPassword').focus(); });
+
+        // Auto-login if session exists
+        (function autoLogin() {
+            const lastUser = localStorage.getItem('dogClickerCurrentUser');
+            if (lastUser) {
+                const accounts = getAccounts();
+                if (accounts[lastUser]) {
+                    loginAs(lastUser, accounts[lastUser]);
+                    return;
+                }
+            }
+            // Show login screen (it's visible by default)
+        })();
+    </script>
+</body>
+</html>
